@@ -6,7 +6,9 @@ whitenoise
 
 ultralytics
 
-torch, torchvision
+torch
+
+torchvision
 
 pillow
 
