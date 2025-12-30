@@ -1,0 +1,141 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'classifier/custom.css' %}">
+  <title>Skin Disease Classifier</title>
+</head>
+
+<body>
+
+  <!-- 1) Toast container (must be directly under body) -->
+  <div id="toastRoot" class="toast-root"></div>
+
+  <!-- 2) App wrapper (wraps your entire page content) -->
+  <div class="app">
+
+    <h2>Skin Disease Classifier (Deployed Model: YOLOv11)</h2>
+    <p class="muted">Upload an image or use webcam live prediction. Output includes confidence %.</p>
+
+    <div class="row">
+      <div class="card">
+        <h3>Upload Image</h3>
+        <input type="file" id="fileInput" accept="image/*" />
+        <div style="margin-top:12px;">
+          <button id="btnPredictUpload">Predict</button>
+        </div>
+        <div id="uploadResult" class="result" style="display:none;"></div>
+      </div>
+
+      <div class="card">
+        <h3>Webcam</h3>
+        <video id="video" autoplay playsinline></video>
+        <canvas id="canvas" style="display:none;"></canvas>
+
+        <div style="margin-top:12px;">
+          <button id="btnStart">Start Webcam</button>
+          <button id="btnStop" disabled>Stop Webcam</button>
+          <button id="btnLive" disabled>Start Live Predict</button>
+        </div>
+
+        <div id="camResult" class="result" style="display:none;"></div>
+        <p class="muted">Live prediction sends frames every ~700ms.</p>
+      </div>
+    </div>
+
+  </div> <!-- end .app -->
+
+  <script>
+    function renderResult(el, data) {
+      const top1 = data.top1;
+      const confPct = (top1.confidence * 100).toFixed(2);
+
+      let html = `<b>Top-1:</b> ${top1.label} (${confPct}%)<br/><br/>`;
+      html += `<b>Top-5:</b><ol>`;
+      for (const x of data.top5) {
+        html += `<li>${x.label} (${(x.confidence*100).toFixed(2)}%)</li>`;
+      }
+      html += `</ol>`;
+      el.innerHTML = html;
+      el.style.display = "block";
+    }
+
+    // Upload
+    document.getElementById("btnPredictUpload").addEventListener("click", async () => {
+      const f = document.getElementById("fileInput").files[0];
+      if (!f) { alert("Choose an image first."); return; }
+
+      const form = new FormData();
+      form.append("image", f);
+
+      const res = await fetch("/predict/", { method: "POST", body: form });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || "Prediction failed"); return; }
+      renderResult(document.getElementById("uploadResult"), data);
+    });
+
+    // Webcam
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
+    const btnStart = document.getElementById("btnStart");
+    const btnStop = document.getElementById("btnStop");
+    const btnLive = document.getElementById("btnLive");
+    const camResult = document.getElementById("camResult");
+
+    let stream = null;
+    let liveTimer = null;
+
+    btnStart.addEventListener("click", async () => {
+      stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      video.srcObject = stream;
+      btnStart.disabled = true;
+      btnStop.disabled = false;
+      btnLive.disabled = false;
+    });
+
+    btnStop.addEventListener("click", () => {
+      if (liveTimer) { clearInterval(liveTimer); liveTimer = null; btnLive.textContent = "Start Live Predict"; }
+      if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+      video.srcObject = null;
+      btnStart.disabled = false;
+      btnStop.disabled = true;
+      btnLive.disabled = true;
+    });
+
+    async function sendFrameOnce() {
+      if (!stream) return;
+      const w = video.videoWidth, h = video.videoHeight;
+      if (!w || !h) return;
+
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0, w, h);
+
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.85));
+      const form = new FormData();
+      form.append("frame", blob, "frame.jpg");
+
+      const res = await fetch("/predict-frame/", { method: "POST", body: form });
+      const data = await res.json();
+      if (res.ok) renderResult(camResult, data);
+    }
+
+    btnLive.addEventListener("click", () => {
+      if (liveTimer) {
+        clearInterval(liveTimer);
+        liveTimer = null;
+        btnLive.textContent = "Start Live Predict";
+        return;
+      }
+      liveTimer = setInterval(sendFrameOnce, 700);
+      btnLive.textContent = "Stop Live Predict";
+    });
+  </script>
+
+  <script src="{% static 'classifier/style.js' %}"></script>
+  <copyright-footer>Adeolu Olofintuyi</copyright-footer>
+</body>
+</html>
