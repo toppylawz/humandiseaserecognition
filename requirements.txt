@@ -1,0 +1,13 @@
+Django
+
+gunicorn
+
+whitenoise
+
+ultralytics
+
+torch, torchvision
+
+pillow
+
+numpy
