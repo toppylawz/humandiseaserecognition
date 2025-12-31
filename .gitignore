@@ -1,0 +1,45 @@
+# Python bytecode files
+*.py[cod]
+__pycache__/
+
+# Django specific files
+*.log
+*.pot
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+db.sqlite3
+settings.pyc
+settings.py
+
+# Environment variables
+.env
+
+# Virtual environment
+venv/
+ENV/
+env/
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+
+# Static and media files
+/static/
+/media/
+
+# Migrations
+*/migrations/*
+
+# Coverage reports
+htmlcov/
+.coverage
+*.cover
+
+# Test output
+*.test
+
+# Node modules (if using npm/yarn)
+node_modules/

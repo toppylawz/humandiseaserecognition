@@ -1,158 +1,68 @@
 // Toast Notification System
-class Toast {
-    static show(message, type = 'info', duration = 5000) {
-        const toastRoot = document.getElementById('toastRoot');
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        toast.innerHTML = `
-            <span>${message}</span>
-            <button class="toast-close">&times;</button>
-        `;
-        
-        toastRoot.appendChild(toast);
-        
-        // Auto remove after duration
-        const timer = setTimeout(() => {
-            toast.remove();
-        }, duration);
-        
-        // Close button
-        toast.querySelector('.toast-close').addEventListener('click', () => {
-            clearTimeout(timer);
-            toast.remove();
-        });
-        
-        return toast;
-    }
-}
-
-// Loading State Manager
-const LoadingState = {
-    setLoading(button, isLoading) {
-        if (isLoading) {
-            button.dataset.originalText = button.textContent;
-            button.innerHTML = `<span class="loading"></span>${button.textContent}`;
-            button.disabled = true;
-        } else {
-            button.textContent = button.dataset.originalText || button.textContent;
-            button.disabled = false;
-        }
-    }
-};
-
-// Result Visualization with Animation
-class ResultVisualizer {
-    static animateConfidenceBars() {
-        setTimeout(() => {
-            document.querySelectorAll('.confidence-level').forEach(bar => {
-                const width = bar.style.width;
-                bar.style.width = '0%';
-                setTimeout(() => {
-                    bar.style.width = width;
-                }, 100);
-            });
-        }, 300);
-    }
+function showToast(message, type = 'info', duration = 5000) {
+    const toastRoot = document.getElementById('toastRoot');
+    const toast = document.createElement('div');
+    toast.className = 'toast ' + type;
+    toast.innerHTML = `
+        <span>${message}</span>
+        <button class="toast-close">&times;</button>
+    `;
     
-    static createResultHTML(data) {
-        const top1 = data.top1;
-        const confPct = (top1.confidence * 100).toFixed(2);
-        
-        let html = `
-            <div style="margin-bottom: 20px;">
-                <b style="font-size: 1.1rem;">🔍 Diagnosis Result:</b>
-                <div style="display: flex; align-items: center; margin-top: 10px;">
-                    <span style="background: #667eea; color: white; padding: 8px 16px; border-radius: 8px; font-weight: 600; margin-right: 15px;">
-                        ${top1.label}
-                    </span>
-                    <span style="font-size: 1.2rem; font-weight: 700; color: #2d3748;">
-                        ${confPct}%
-                    </span>
-                </div>
-                <div class="confidence-bar">
-                    <div class="confidence-level" style="width: ${confPct}%"></div>
-                </div>
-            </div>
-            
-            <b style="display: block; margin-bottom: 10px;">📊 Top 5 Predictions:</b>
-            <ol style="list-style: none; padding: 0;">
-        `;
-        
-        data.top5.forEach((x, index) => {
-            const percentage = (x.confidence * 100).toFixed(2);
-            const barWidth = Math.min(percentage, 100);
-            html += `
-                <li style="margin-bottom: 12px; padding: 10px; background: #f8fafc; border-radius: 8px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                        <span>
-                            <span style="display: inline-block; width: 24px; height: 24px; background: #667eea; color: white; border-radius: 50%; text-align: center; line-height: 24px; margin-right: 10px;">
-                                ${index + 1}
-                            </span>
-                            ${x.label}
-                        </span>
-                        <span style="font-weight: 600; color: #4a5568;">${percentage}%</span>
-                    </div>
-                    <div class="confidence-bar">
-                        <div class="confidence-level" style="width: ${barWidth}%"></div>
-                    </div>
-                </li>
-            `;
-        });
-        
-        html += `</ol>`;
-        return html;
+    toastRoot.appendChild(toast);
+    
+    const timer = setTimeout(() => {
+        toast.remove();
+    }, duration);
+    
+    toast.querySelector('.toast-close').addEventListener('click', () => {
+        clearTimeout(timer);
+        toast.remove();
+    });
+}
+
+// Set loading state on button
+function setLoading(button, isLoading) {
+    if (isLoading) {
+        button.dataset.originalText = button.textContent;
+        button.innerHTML = '<span style="margin-right: 8px;">⏳</span>' + button.textContent;
+        button.disabled = true;
+    } else {
+        button.textContent = button.dataset.originalText || button.textContent;
+        button.disabled = false;
     }
 }
 
-// Main Application Initialization
+// Initialize when page loads
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize UI elements
     initializeFileUpload();
     initializeWebcam();
-    initializeButtons();
-    initializeTheme();
+    
+    // Show welcome message
+    setTimeout(() => {
+        showToast('Welcome to Skin Disease Classifier!', 'info', 3000);
+    }, 1000);
 });
 
+// File Upload Handler
 function initializeFileUpload() {
     const fileInput = document.getElementById('fileInput');
     const predictBtn = document.getElementById('btnPredictUpload');
     const uploadResult = document.getElementById('uploadResult');
     
-    // Preview file before upload
-    fileInput.addEventListener('change', function(e) {
-        if (e.target.files[0]) {
-            const fileName = e.target.files[0].name;
-            Toast.show(`Selected: ${fileName}`, 'info', 3000);
-            
-            // Preview image
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                uploadResult.innerHTML = `
-                    <div style="text-align: center; margin-bottom: 15px;">
-                        <img src="${e.target.result}" style="max-width: 200px; max-height: 200px; border-radius: 10px; border: 3px solid #e2e8f0;">
-                    </div>
-                `;
-                uploadResult.style.display = 'block';
-            };
-            reader.readAsDataURL(e.target.files[0]);
-        }
-    });
-    
-    // Predict button
     predictBtn.addEventListener('click', async function() {
         const file = fileInput.files[0];
         if (!file) {
-            Toast.show('Please select an image first.', 'warning', 3000);
+            showToast('Please select an image first.', 'warning', 3000);
             return;
         }
         
-        LoadingState.setLoading(predictBtn, true);
+        setLoading(predictBtn, true);
         
         try {
             const form = new FormData();
             form.append("image", file);
             
-            Toast.show('Analyzing image...', 'info', 2000);
+            showToast('Analyzing image...', 'info', 2000);
             
             const response = await fetch("/predict/", {
                 method: "POST",
@@ -165,20 +75,34 @@ function initializeFileUpload() {
             
             const data = await response.json();
             
-            uploadResult.innerHTML = ResultVisualizer.createResultHTML(data);
+            // Display results
+            const top1 = data.top1;
+            const confPct = (top1.confidence * 100).toFixed(2);
+
+            let html = `<b>🔍 Diagnosis Result:</b><br>`;
+            html += `<div style="background: #667eea; color: white; padding: 10px; border-radius: 8px; margin: 10px 0;">
+                       <strong>${top1.label}</strong><br>
+                       <span style="font-size: 1.2em;">${confPct}% confidence</span>
+                     </div>`;
+            html += `<b>📊 Top 5 Predictions:</b><ol>`;
+            data.top5.forEach((x, index) => {
+                html += `<li>${x.label} (${(x.confidence*100).toFixed(2)}%)</li>`;
+            });
+            html += `</ol>`;
+            
+            uploadResult.innerHTML = html;
             uploadResult.style.display = "block";
             
-            ResultVisualizer.animateConfidenceBars();
-            
-            Toast.show('Analysis complete!', 'success', 3000);
+            showToast('Analysis complete!', 'success', 3000);
         } catch (error) {
-            Toast.show('Error: ' + error.message, 'error', 4000);
+            showToast('Error: ' + error.message, 'error', 4000);
         } finally {
-            LoadingState.setLoading(predictBtn, false);
+            setLoading(predictBtn, false);
         }
     });
 }
 
+// Webcam Handler
 function initializeWebcam() {
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
@@ -193,17 +117,20 @@ function initializeWebcam() {
     
     // Start Webcam
     btnStart.addEventListener('click', async function() {
+        setLoading(btnStart, true);
+        
         try {
-            LoadingState.setLoading(btnStart, true);
-            stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { 
+            // Try to get user media
+            const constraints = {
+                video: {
                     width: { ideal: 640 },
                     height: { ideal: 480 },
-                    facingMode: 'environment'
-                }, 
-                audio: false 
-            });
+                    facingMode: 'environment' // Use rear camera on mobile
+                },
+                audio: false
+            };
             
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
             video.srcObject = stream;
             
             // Wait for video to load
@@ -215,11 +142,29 @@ function initializeWebcam() {
             btnStop.disabled = false;
             btnLive.disabled = false;
             
-            Toast.show('Webcam started successfully!', 'success', 3000);
+            showToast('Webcam started successfully!', 'success', 3000);
+            
         } catch (error) {
-            Toast.show('Error accessing webcam: ' + error.message, 'error', 4000);
+            console.error('Webcam error:', error);
+            
+            // Try with simpler constraints if the first attempt fails
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: true, 
+                    audio: false 
+                });
+                video.srcObject = stream;
+                
+                btnStart.disabled = true;
+                btnStop.disabled = false;
+                btnLive.disabled = false;
+                
+                showToast('Webcam started!', 'success', 3000);
+            } catch (secondError) {
+                showToast('Could not access camera. Please check permissions.', 'error', 5000);
+            }
         } finally {
-            LoadingState.setLoading(btnStart, false);
+            setLoading(btnStart, false);
         }
     });
     
@@ -242,13 +187,13 @@ function initializeWebcam() {
         btnStop.disabled = true;
         btnLive.disabled = true;
         
-        Toast.show('Webcam stopped', 'info', 3000);
+        showToast('Webcam stopped', 'info', 3000);
     });
     
     // Live Prediction
-    btnLive.addEventListener('click', function() {
+    btnLive.addEventListener('click', async function() {
         if (!stream) {
-            Toast.show('Please start webcam first.', 'warning', 3000);
+            showToast('Please start webcam first.', 'warning', 3000);
             return;
         }
         
@@ -257,19 +202,19 @@ function initializeWebcam() {
             liveTimer = setInterval(sendFrame, 700);
             btnLive.textContent = "Stop Live Predict";
             btnLive.style.background = 'linear-gradient(90deg, #f56565 0%, #e53e3e 100%)';
-            Toast.show('Live prediction started', 'success', 3000);
+            showToast('Live prediction started', 'success', 3000);
         } else {
             isLivePredicting = false;
             clearInterval(liveTimer);
             liveTimer = null;
             btnLive.textContent = "Start Live Predict";
             btnLive.style.background = 'linear-gradient(90deg, #ed8936 0%, #dd6b20 100%)';
-            Toast.show('Live prediction stopped', 'info', 3000);
+            showToast('Live prediction stopped', 'info', 3000);
         }
     });
     
     async function sendFrame() {
-        if (!stream) return;
+        if (!stream || !isLivePredicting) return;
         
         const w = video.videoWidth;
         const h = video.videoHeight;
@@ -295,105 +240,85 @@ function initializeWebcam() {
             
             if (response.ok) {
                 const data = await response.json();
-                camResult.innerHTML = ResultVisualizer.createResultHTML(data);
+                
+                // Display results
+                const top1 = data.top1;
+                const confPct = (top1.confidence * 100).toFixed(2);
+
+                let html = `<b>🔍 Live Diagnosis:</b><br>`;
+                html += `<div style="background: #667eea; color: white; padding: 10px; border-radius: 8px; margin: 10px 0;">
+                           <strong>${top1.label}</strong><br>
+                           <span style="font-size: 1.2em;">${confPct}% confidence</span>
+                         </div>`;
+                html += `<b>📊 Top 5:</b><ol>`;
+                data.top5.forEach((x, index) => {
+                    html += `<li>${x.label} (${(x.confidence*100).toFixed(2)}%)</li>`;
+                });
+                html += `</ol>`;
+                
+                camResult.innerHTML = html;
                 camResult.style.display = "block";
-                ResultVisualizer.animateConfidenceBars();
             }
         } catch (error) {
-            console.error('Prediction error:', error);
+            console.error('Frame prediction error:', error);
         }
     }
 }
 
-function initializeButtons() {
-    // Add ripple effect to all buttons
-    document.querySelectorAll('button').forEach(button => {
-        button.addEventListener('click', function(e) {
-            const rect = this.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            
-            const ripple = document.createElement('span');
-            ripple.style.cssText = `
-                position: absolute;
-                border-radius: 50%;
-                background: rgba(255, 255, 255, 0.7);
-                transform: scale(0);
-                animation: ripple 0.6s linear;
-                pointer-events: none;
-                width: 100px;
-                height: 100px;
-                top: ${y - 50}px;
-                left: ${x - 50}px;
-            `;
-            
-            this.style.position = 'relative';
-            this.style.overflow = 'hidden';
-            this.appendChild(ripple);
-            
-            setTimeout(() => ripple.remove(), 600);
-        });
-    });
+// Add CSS for toasts
+const style = document.createElement('style');
+style.textContent = `
+.toast-root {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
 }
 
-function initializeTheme() {
-    // Add CSS for ripple animation
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes ripple {
-            to {
-                transform: scale(4);
-                opacity: 0;
-            }
-        }
-    `;
-    document.head.appendChild(style);
-    
-    // Add keyboard shortcuts
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            const btnStop = document.getElementById('btnStop');
-            if (!btnStop.disabled) {
-                btnStop.click();
-            }
-        }
-        
-        if (e.key === ' ' && e.target === document.body) {
-            e.preventDefault();
-            const btnLive = document.getElementById('btnLive');
-            if (!btnLive.disabled) {
-                btnLive.click();
-            }
-        }
-    });
-    
-    // Add tooltips
-    const tooltips = {
-        'btnPredictUpload': 'Upload and analyze an image (Ctrl+U)',
-        'btnStart': 'Start webcam (Ctrl+W)',
-        'btnStop': 'Stop webcam (Esc)',
-        'btnLive': 'Toggle live prediction (Space)',
-        'fileInput': 'Select a skin image for analysis'
-    };
-    
-    Object.entries(tooltips).forEach(([id, text]) => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.title = text;
-        }
-    });
+.toast {
+    padding: 12px 16px;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    animation: slideIn 0.3s ease;
 }
 
-// Export for global use
-window.SkinDiseaseClassifier = {
-    Toast,
-    LoadingState,
-    ResultVisualizer
-};
+.toast.info {
+    background: linear-gradient(90deg, #4299e1 0%, #3182ce 100%);
+}
 
-// Show welcome message
-window.addEventListener('load', function() {
-    setTimeout(() => {
-        Toast.show('Welcome to Skin Disease Classifier!', 'info', 4000);
-    }, 1000);
-});
+.toast.success {
+    background: linear-gradient(90deg, #48bb78 0%, #38a169 100%);
+}
+
+.toast.warning {
+    background: linear-gradient(90deg, #ed8936 0%, #dd6b20 100%);
+}
+
+.toast.error {
+    background: linear-gradient(90deg, #f56565 0%, #e53e3e 100%);
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.toast-close {
+    background: none;
+    border: none;
+    color: white;
+    margin-left: 10px;
+    cursor: pointer;
+    font-size: 1.2em;
+}
+`;
+document.head.appendChild(style);
