@@ -26,7 +26,8 @@ def predict_upload(request):
         return JsonResponse({"error": f"Invalid image: {e}"}, status=400)
 
     pred = predict_pil_image(img, topk=5)
-    return JsonResponse(pred)
+    return JsonResponse(pred, status=200 if "error" not in pred else 500)
+
 
 
 @csrf_exempt
@@ -48,4 +49,4 @@ def predict_frame(request):
         return JsonResponse({"error": f"Invalid frame: {e}"}, status=400)
 
     pred = predict_pil_image(img, topk=5)
-    return JsonResponse(pred)
+    return JsonResponse(pred, status=200 if "error" not in pred else 500)
