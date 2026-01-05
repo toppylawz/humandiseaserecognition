@@ -1,50 +1,586 @@
-// Toast Notification System
-class Toast {
-    static show(message, type = 'info', duration = 5000) {
+// Enhanced Toast System
+class ToastSystem {
+    static show(message, type = 'info', duration = 4000) {
         const toastRoot = document.getElementById('toastRoot');
+        if (!toastRoot) return null;
+        
+        // Remove existing toasts if too many
+        const existingToasts = toastRoot.querySelectorAll('.toast');
+        if (existingToasts.length > 3) {
+            existingToasts[0].remove();
+        }
+        
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
         toast.innerHTML = `
             <span>${message}</span>
-            <button class="toast-close">&times;</button>
+            <button class="toast-close" aria-label="Close notification">&times;</button>
         `;
         
         toastRoot.appendChild(toast);
         
-        // Auto remove after duration
-        const timer = setTimeout(() => {
-            toast.remove();
-        }, duration);
+        // Close button functionality
+        const closeBtn = toast.querySelector('.toast-close');
+        const closeToast = () => {
+            toast.classList.add('hiding');
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, 300);
+        };
         
-        // Close button
-        toast.querySelector('.toast-close').addEventListener('click', () => {
+        closeBtn.addEventListener('click', closeToast);
+        
+        // Auto-dismiss after duration
+        const timer = setTimeout(closeToast, duration);
+        
+        // Pause timer on hover
+        toast.addEventListener('mouseenter', () => {
             clearTimeout(timer);
-            toast.remove();
+        });
+        
+        toast.addEventListener('mouseleave', () => {
+            setTimeout(closeToast, duration);
         });
         
         return toast;
     }
 }
 
-// Loading State Manager
-const LoadingState = {
-    setLoading(button, isLoading) {
-        if (isLoading) {
-            button.dataset.originalText = button.textContent;
-            button.innerHTML = `<span class="loading"></span>${button.textContent}`;
-            button.disabled = true;
-        } else {
-            button.textContent = button.dataset.originalText || button.textContent;
-            button.disabled = false;
+// Camera Manager with Front/Back Switching
+class CameraManager {
+    constructor(videoElement) {
+        this.video = videoElement;
+        this.stream = null;
+        this.currentCamera = 'environment'; // 'environment' for back, 'user' for front
+        this.isCameraActive = false;
+    }
+    
+    async startCamera(cameraType = null) {
+        if (cameraType) {
+            this.currentCamera = cameraType;
+        }
+        
+        if (this.stream) {
+            this.stopCamera();
+        }
+        
+        const constraints = {
+            video: {
+                facingMode: this.currentCamera,
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                frameRate: { ideal: 30 }
+            },
+            audio: false
+        };
+        
+        try {
+            this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+            this.video.srcObject = this.stream;
+            this.isCameraActive = true;
+            
+            // Wait for video to be ready
+            await new Promise((resolve) => {
+                if (this.video.readyState >= 3) {
+                    resolve();
+                } else {
+                    this.video.onloadedmetadata = resolve;
+                }
+            });
+            
+            return true;
+        } catch (error) {
+            console.error('Camera start failed:', error);
+            
+            // Try with simpler constraints if facingMode fails
+            try {
+                this.stream = await navigator.mediaDevices.getUserMedia({
+                    video: true,
+                    audio: false
+                });
+                this.video.srcObject = this.stream;
+                this.isCameraActive = true;
+                return true;
+            } catch (secondError) {
+                throw secondError;
+            }
         }
     }
-};
+    
+    switchCamera() {
+        // Toggle between front and back camera
+        this.currentCamera = this.currentCamera === 'environment' ? 'user' : 'environment';
+        return this.currentCamera;
+    }
+    
+    getCurrentCameraLabel() {
+        return this.currentCamera === 'environment' ? 'Back Camera' : 'Front Camera';
+    }
+    
+    stopCamera() {
+        if (this.stream) {
+            this.stream.getTracks().forEach(track => {
+                track.stop();
+            });
+            this.stream = null;
+        }
+        this.video.srcObject = null;
+        this.isCameraActive = false;
+    }
+    
+    isActive() {
+        return this.isCameraActive;
+    }
+}
 
-// Result Visualization with Animation
-class ResultVisualizer {
-    static animateConfidenceBars() {
+// Main Application
+class DermatologyAIApp {
+    constructor() {
+        this.video = document.getElementById('video');
+        this.canvas = document.getElementById('canvas');
+        this.btnStart = document.getElementById('btnStart');
+        this.btnStop = document.getElementById('btnStop');
+        this.btnLive = document.getElementById('btnLive');
+        this.btnPredictUpload = document.getElementById('btnPredictUpload');
+        this.btnSwitchCamera = document.getElementById('btnSwitchCamera');
+        this.fileInput = document.getElementById('fileInput');
+        this.filePreview = document.getElementById('filePreview');
+        this.previewImage = document.getElementById('previewImage');
+        this.uploadResult = document.getElementById('uploadResult');
+        this.camResult = document.getElementById('camResult');
+        this.scrollIndicator = document.getElementById('scrollIndicator');
+        
+        this.cameraManager = new CameraManager(this.video);
+        this.liveTimer = null;
+        this.isLivePredicting = false;
+        this.currentFile = null;
+        
+        this.init();
+    }
+    
+    init() {
+        // Setup event listeners
+        this.setupEventListeners();
+        
+        // Setup mobile scroll indicator
+        this.setupScrollIndicator();
+        
+        // Show welcome message
         setTimeout(() => {
-            document.querySelectorAll('.confidence-level').forEach(bar => {
+            ToastSystem.show('Welcome to Dermatology AI Assistant!', 'info', 3000);
+        }, 1000);
+    }
+    
+    setupEventListeners() {
+        // File Upload
+        this.btnPredictUpload.addEventListener('click', () => this.analyzeUpload());
+        
+        // File input change for preview
+        this.fileInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) {
+                this.currentFile = e.target.files[0];
+                this.showFilePreview(this.currentFile);
+            }
+        });
+        
+        // Camera Controls
+        this.btnStart.addEventListener('click', () => this.startCamera());
+        this.btnStop.addEventListener('click', () => this.stopCamera());
+        this.btnLive.addEventListener('click', () => this.toggleLiveAnalysis());
+        this.btnSwitchCamera.addEventListener('click', () => this.switchCamera());
+        
+        // Handle page visibility changes
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && this.cameraManager.isActive()) {
+                this.stopCamera();
+                ToastSystem.show('Camera stopped due to page background', 'info', 3000);
+            }
+        });
+    }
+    
+    setupScrollIndicator() {
+        // Hide scroll indicator on scroll
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 100) {
+                this.scrollIndicator.style.opacity = '0';
+                this.scrollIndicator.style.transition = 'opacity 0.5s ease';
+            }
+        });
+        
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            this.scrollIndicator.style.opacity = '0';
+            this.scrollIndicator.style.transition = 'opacity 0.5s ease';
+        }, 5000);
+    }
+    
+    showFilePreview(file) {
+        if (!file) return;
+        
+        // Check if it's an image
+        if (!file.type.match('image.*')) {
+            ToastSystem.show('Please select an image file', 'error', 3000);
+            this.filePreview.style.display = 'none';
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            this.previewImage.src = e.target.result;
+            this.filePreview.style.display = 'block';
+            ToastSystem.show('Image loaded for preview', 'info', 2000);
+        };
+        reader.readAsDataURL(file);
+    }
+    
+    async startCamera() {
+        // Update button state
+        this.setButtonLoading(this.btnStart, true, '<i class="fas fa-spinner fa-spin"></i> Starting...');
+        
+        try {
+            await this.cameraManager.startCamera();
+            
+            // Update UI state
+            this.btnStart.disabled = true;
+            this.btnStop.disabled = false;
+            this.btnLive.disabled = false;
+            this.setButtonLoading(this.btnStart, false, '<i class="fas fa-play"></i> Start Camera');
+            
+            ToastSystem.show(`${this.cameraManager.getCurrentCameraLabel()} started successfully`, 'success', 2000);
+            
+        } catch (error) {
+            console.error('Camera error:', error);
+            this.setButtonLoading(this.btnStart, false, '<i class="fas fa-play"></i> Start Camera');
+            
+            let errorMessage = 'Could not access camera. ';
+            if (error.name === 'NotAllowedError') {
+                errorMessage += 'Please allow camera permissions.';
+            } else if (error.name === 'NotFoundError') {
+                errorMessage += 'No camera found on your device.';
+            } else {
+                errorMessage += error.message;
+            }
+            
+            ToastSystem.show(errorMessage, 'error', 4000);
+            this.btnStart.disabled = false;
+        }
+    }
+    
+    stopCamera() {
+        // Stop live analysis if running
+        if (this.isLivePredicting) {
+            this.toggleLiveAnalysis();
+        }
+        
+        // Stop camera
+        this.cameraManager.stopCamera();
+        
+        // Update UI state
+        this.btnStart.disabled = false;
+        this.btnStop.disabled = true;
+        this.btnLive.disabled = true;
+        this.btnLive.innerHTML = '<i class="fas fa-broadcast-tower"></i> Start Live Analysis';
+        
+        ToastSystem.show('Camera stopped', 'info', 2000);
+    }
+    
+    switchCamera() {
+        if (!this.cameraManager.isActive()) {
+            ToastSystem.show('Please start the camera first', 'warning', 3000);
+            return;
+        }
+        
+        // Animate the switch button
+        this.btnSwitchCamera.style.transform = 'rotate(180deg)';
+        setTimeout(() => {
+            this.btnSwitchCamera.style.transform = 'rotate(0deg)';
+        }, 300);
+        
+        // Switch camera
+        const newCamera = this.cameraManager.switchCamera();
+        ToastSystem.show(`Switching to ${this.cameraManager.getCurrentCameraLabel()}...`, 'info', 2000);
+        
+        // Restart with new camera
+        setTimeout(() => {
+            this.startCamera();
+        }, 500);
+    }
+    
+    async analyzeUpload() {
+        if (!this.currentFile) {
+            ToastSystem.show('Please select an image first', 'warning', 3000);
+            return;
+        }
+        
+        // Check file size (10MB max)
+        if (this.currentFile.size > 10 * 1024 * 1024) {
+            ToastSystem.show('File too large. Maximum size is 10MB.', 'error', 4000);
+            return;
+        }
+        
+        // Show loading state
+        this.setButtonLoading(this.btnPredictUpload, true, '<i class="fas fa-spinner fa-spin"></i> Analyzing...');
+        
+        const formData = new FormData();
+        formData.append("image", this.currentFile);
+        
+        try {
+            const response = await fetch("/predict/", {
+                method: "POST",
+                body: formData
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Analysis failed');
+            }
+            
+            const data = await response.json();
+            
+            // Check if it's a rejected image (non-skin or low confidence)
+            if (data.rejected) {
+                this.showRejectedResult(data);
+                ToastSystem.show('Image may not be suitable for analysis', 'warning', 3000);
+            } else if (data.error) {
+                this.showErrorResult(data.error);
+                ToastSystem.show('Analysis error: ' + data.error, 'error', 4000);
+            } else {
+                this.showAnalysisResult(data);
+                ToastSystem.show('Analysis complete!', 'success', 3000);
+            }
+            
+        } catch (error) {
+            console.error('Analysis error:', error);
+            this.showErrorResult(error.message);
+            ToastSystem.show('Error: ' + error.message, 'error', 4000);
+        } finally {
+            this.setButtonLoading(this.btnPredictUpload, false, '<i class="fas fa-search"></i> Analyze Image');
+        }
+    }
+    
+    showRejectedResult(data) {
+        const confPct = (data.confidence * 100).toFixed(2);
+        this.uploadResult.innerHTML = `
+            <div style="background: #fff3e0; border-left: 4px solid #ff9800; padding: 20px; border-radius: 8px;">
+                <h4 style="color: #ef6c00; margin-bottom: 10px;">
+                    <i class="fas fa-exclamation-triangle"></i> Predict
+                </h4>
+                <p style="color: #5d4037; margin-bottom: 8px;">
+                    <strong>Result:</strong> ${data.label}
+                </p>
+                <p style="color: #5d4037; margin-bottom: 8px;">
+                    <strong>Reason:</strong> Low confidence / uncertain image.
+                </p>
+                <p style="color: #5d4037; margin-bottom: 15px;">
+                    <strong>Model confidence:</strong> ${confPct}%
+                </p>
+                <div class="confidence-meter">
+                    <div class="confidence-fill" style="width: ${confPct}%"></div>
+                </div>
+                <div style="margin-top: 15px; padding: 12px; background: #fff8e1; border-radius: 6px;">
+                    <p style="color: #5d4037; margin: 0; font-size: 0.9rem;">
+                        <i class="fas fa-lightbulb"></i> 
+                        <strong>Tip:</strong> Use a clear, close-up skin image with good lighting.
+                    </p>
+                </div>
+            </div>
+        `;
+        this.uploadResult.classList.add('active');
+        this.animateConfidenceBars();
+    }
+    
+    showErrorResult(errorMessage) {
+        this.uploadResult.innerHTML = `
+            <div style="background: #ffebee; border-left: 4px solid #f44336; padding: 20px; border-radius: 8px;">
+                <h4 style="color: #d32f2f; margin-bottom: 10px;">
+                    <i class="fas fa-exclamation-circle"></i> Analysis Error
+                </h4>
+                <p style="color: #5d4037;">${errorMessage}</p>
+            </div>
+        `;
+        this.uploadResult.classList.add('active');
+    }
+    
+    showAnalysisResult(data) {
+        const top1 = data.top1;
+        const confPct = (top1.confidence * 100).toFixed(2);
+        
+        let html = `
+            <div style="margin-bottom: 20px;">
+                <h4 style="color: #2c3e50; margin-bottom: 15px;">
+                    <i class="fas fa-diagnoses"></i> Primary Assessment
+                </h4>
+                <div style="background: #e8f5e9; padding: 20px; border-radius: 10px; border-left: 4px solid #4caf50;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <span style="font-size: 1.1rem; font-weight: 600; color: #2e7d32;">${top1.label}</span>
+                        <span style="font-size: 1.3rem; font-weight: 700; color: #1b5e20;">${confPct}%</span>
+                    </div>
+                    <div class="confidence-meter">
+                        <div class="confidence-fill" style="width: ${confPct}%"></div>
+                    </div>
+                    <p style="color: #388e3c; margin-top: 10px; font-size: 0.9rem;">
+                        <i class="fas fa-chart-line"></i> Model confidence level
+                    </p>
+                </div>
+            </div>
+            
+            <div>
+                <h4 style="color: #2c3e50; margin-bottom: 15px;">
+                    <i class="fas fa-list-ol"></i> Differential Diagnosis (Top 5)
+                </h4>
+                <div style="background: #f5f5f5; padding: 20px; border-radius: 10px;">
+                    <ol style="margin: 0; padding-left: 20px;">
+        `;
+        
+        data.top5.forEach((x, index) => {
+            const percentage = (x.confidence * 100).toFixed(2);
+            const barWidth = Math.min(percentage, 100);
+            html += `
+                <li style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: ${index === data.top5.length - 1 ? 'none' : '1px solid #e0e0e0'};">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span style="font-weight: 600; color: #37474f;">
+                            <span style="display: inline-block; width: 24px; height: 24px; background: #3498db; color: white; border-radius: 50%; text-align: center; line-height: 24px; margin-right: 10px; font-size: 0.9rem;">
+                                ${index + 1}
+                            </span>
+                            ${x.label}
+                        </span>
+                        <span style="font-weight: 700; color: #455a64;">${percentage}%</span>
+                    </div>
+                    <div class="confidence-meter">
+                        <div class="confidence-fill" style="width: ${barWidth}%; background: linear-gradient(90deg, rgba(52, 152, 219, 0.8) 0%, rgba(41, 128, 185, 0.8) 100%);"></div>
+                    </div>
+                </li>
+            `;
+        });
+        
+        html += `
+                    </ol>
+                    <p style="color: #546e7a; margin-top: 15px; font-size: 0.9rem; font-style: italic;">
+                        <i class="fas fa-info-circle"></i> Differential diagnoses listed by confidence level.
+                    </p>
+                </div>
+            </div>
+        `;
+        
+        this.uploadResult.innerHTML = html;
+        this.uploadResult.classList.add('active');
+        this.animateConfidenceBars();
+    }
+    
+    toggleLiveAnalysis() {
+        if (!this.cameraManager.isActive()) {
+            ToastSystem.show('Please start camera first', 'warning', 3000);
+            return;
+        }
+        
+        if (this.isLivePredicting) {
+            // Stop live analysis
+            clearInterval(this.liveTimer);
+            this.liveTimer = null;
+            this.isLivePredicting = false;
+            this.btnLive.innerHTML = '<i class="fas fa-broadcast-tower"></i> Start Live Analysis';
+            ToastSystem.show('Live analysis stopped', 'info', 2000);
+        } else {
+            // Start live analysis
+            this.isLivePredicting = true;
+            this.liveTimer = setInterval(() => this.sendFrame(), 700);
+            this.btnLive.innerHTML = '<i class="fas fa-stop-circle"></i> Stop Live Analysis';
+            ToastSystem.show('Live analysis started', 'success', 2000);
+        }
+    }
+    
+    async sendFrame() {
+        if (!this.cameraManager.isActive() || !this.isLivePredicting) return;
+        
+        const w = this.video.videoWidth;
+        const h = this.video.videoHeight;
+        if (!w || !h) return;
+        
+        this.canvas.width = w;
+        this.canvas.height = h;
+        const ctx = this.canvas.getContext('2d');
+        ctx.drawImage(this.video, 0, 0, w, h);
+        
+        try {
+            const blob = await new Promise(resolve => {
+                this.canvas.toBlob(resolve, 'image/jpeg', 0.85);
+            });
+            
+            const formData = new FormData();
+            formData.append("frame", blob, "frame.jpg");
+            
+            const response = await fetch("/predict-frame/", {
+                method: "POST",
+                body: formData
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                
+                if (data.rejected) {
+                    const confPct = (data.confidence * 100).toFixed(2);
+                    this.camResult.innerHTML = `
+                        <div style="background: #fff3e0; border-left: 4px solid #ff9800; padding: 20px; border-radius: 8px;">
+                            <h4 style="color: #ef6c00; margin-bottom: 10px;">
+                                <i class="fas fa-exclamation-triangle"></i> Predict
+                            </h4>
+                            <p style="color: #5d4037; margin-bottom: 8px;">
+                                <strong>Result:</strong> ${data.label}
+                            </p>
+                            <p style="color: #5d4037; margin-bottom: 8px;">
+                                <strong>Reason:</strong> Low confidence / uncertain image.
+                            </p>
+                            <p style="color: #5d4037; margin-bottom: 15px;">
+                                <strong>Model confidence:</strong> ${confPct}%
+                            </p>
+                            <div class="confidence-meter">
+                                <div class="confidence-fill" style="width: ${confPct}%"></div>
+                            </div>
+                        </div>
+                    `;
+                } else if (data.error) {
+                    this.camResult.innerHTML = `
+                        <div style="background: #ffebee; border-left: 4px solid #f44336; padding: 20px; border-radius: 8px;">
+                            <h4 style="color: #d32f2f; margin-bottom: 10px;">
+                                <i class="fas fa-exclamation-circle"></i> Live Analysis Error
+                            </h4>
+                            <p style="color: #5d4037;">${data.error}</p>
+                        </div>
+                    `;
+                } else {
+                    const top1 = data.top1;
+                    const confPct = (top1.confidence * 100).toFixed(2);
+                    
+                    let html = `
+                        <div style="background: #e8f5e9; padding: 20px; border-radius: 10px; border-left: 4px solid #4caf50;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <span style="font-size: 1.1rem; font-weight: 600; color: #2e7d32;">${top1.label}</span>
+                                <span style="font-size: 1.3rem; font-weight: 700; color: #1b5e20;">${confPct}%</span>
+                            </div>
+                            <div class="confidence-meter">
+                                <div class="confidence-fill" style="width: ${confPct}%"></div>
+                            </div>
+                            <p style="color: #388e3c; margin-top: 10px; font-size: 0.9rem;">
+                                <i class="fas fa-chart-line"></i> Live confidence level
+                            </p>
+                        </div>
+                    `;
+                    this.camResult.innerHTML = html;
+                }
+                this.camResult.classList.add('active');
+                this.animateConfidenceBars();
+            }
+        } catch (error) {
+            console.error('Frame analysis error:', error);
+        }
+    }
+    
+    animateConfidenceBars() {
+        setTimeout(() => {
+            const bars = document.querySelectorAll('.confidence-fill');
+            bars.forEach(bar => {
                 const width = bar.style.width;
                 bar.style.width = '0%';
                 setTimeout(() => {
@@ -54,346 +590,22 @@ class ResultVisualizer {
         }, 300);
     }
     
-    static createResultHTML(data) {
-        const top1 = data.top1;
-        const confPct = (top1.confidence * 100).toFixed(2);
-        
-        let html = `
-            <div style="margin-bottom: 20px;">
-                <b style="font-size: 1.1rem;">🔍 Diagnosis Result:</b>
-                <div style="display: flex; align-items: center; margin-top: 10px;">
-                    <span style="background: #667eea; color: white; padding: 8px 16px; border-radius: 8px; font-weight: 600; margin-right: 15px;">
-                        ${top1.label}
-                    </span>
-                    <span style="font-size: 1.2rem; font-weight: 700; color: #2d3748;">
-                        ${confPct}%
-                    </span>
-                </div>
-                <div class="confidence-bar">
-                    <div class="confidence-level" style="width: ${confPct}%"></div>
-                </div>
-            </div>
-            
-            <b style="display: block; margin-bottom: 10px;">📊 Top 5 Predictions:</b>
-            <ol style="list-style: none; padding: 0;">
-        `;
-        
-        data.top5.forEach((x, index) => {
-            const percentage = (x.confidence * 100).toFixed(2);
-            const barWidth = Math.min(percentage, 100);
-            html += `
-                <li style="margin-bottom: 12px; padding: 10px; background: #f8fafc; border-radius: 8px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                        <span>
-                            <span style="display: inline-block; width: 24px; height: 24px; background: #667eea; color: white; border-radius: 50%; text-align: center; line-height: 24px; margin-right: 10px;">
-                                ${index + 1}
-                            </span>
-                            ${x.label}
-                        </span>
-                        <span style="font-weight: 600; color: #4a5568;">${percentage}%</span>
-                    </div>
-                    <div class="confidence-bar">
-                        <div class="confidence-level" style="width: ${barWidth}%"></div>
-                    </div>
-                </li>
-            `;
-        });
-        
-        html += `</ol>`;
-        return html;
-    }
-}
-
-// Main Application Initialization
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize UI elements
-    initializeFileUpload();
-    initializeWebcam();
-    initializeButtons();
-    initializeTheme();
-});
-
-function initializeFileUpload() {
-    const fileInput = document.getElementById('fileInput');
-    const predictBtn = document.getElementById('btnPredictUpload');
-    const uploadResult = document.getElementById('uploadResult');
-    
-    // Preview file before upload
-    fileInput.addEventListener('change', function(e) {
-        if (e.target.files[0]) {
-            const fileName = e.target.files[0].name;
-            Toast.show(`Selected: ${fileName}`, 'info', 3000);
-            
-            // Preview image
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                uploadResult.innerHTML = `
-                    <div style="text-align: center; margin-bottom: 15px;">
-                        <img src="${e.target.result}" style="max-width: 200px; max-height: 200px; border-radius: 10px; border: 3px solid #e2e8f0;">
-                    </div>
-                `;
-                uploadResult.style.display = 'block';
-            };
-            reader.readAsDataURL(e.target.files[0]);
-        }
-    });
-    
-    // Predict button
-    predictBtn.addEventListener('click', async function() {
-        const file = fileInput.files[0];
-        if (!file) {
-            Toast.show('Please select an image first.', 'warning', 3000);
-            return;
-        }
-        
-        LoadingState.setLoading(predictBtn, true);
-        
-        try {
-            const form = new FormData();
-            form.append("image", file);
-            
-            Toast.show('Analyzing image...', 'info', 2000);
-            
-            const response = await fetch("/predict/", {
-                method: "POST",
-                body: form
-            });
-            
-            if (!response.ok) {
-                throw new Error('Prediction failed');
-            }
-            
-            const data = await response.json();
-            
-            uploadResult.innerHTML = ResultVisualizer.createResultHTML(data);
-            uploadResult.style.display = "block";
-            
-            ResultVisualizer.animateConfidenceBars();
-            
-            Toast.show('Analysis complete!', 'success', 3000);
-        } catch (error) {
-            Toast.show('Error: ' + error.message, 'error', 4000);
-        } finally {
-            LoadingState.setLoading(predictBtn, false);
-        }
-    });
-}
-
-function initializeWebcam() {
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const btnStart = document.getElementById('btnStart');
-    const btnStop = document.getElementById('btnStop');
-    const btnLive = document.getElementById('btnLive');
-    const camResult = document.getElementById('camResult');
-    
-    let stream = null;
-    let liveTimer = null;
-    let isLivePredicting = false;
-    
-    // Start Webcam
-    btnStart.addEventListener('click', async function() {
-        try {
-            LoadingState.setLoading(btnStart, true);
-            stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { 
-                    width: { ideal: 640 },
-                    height: { ideal: 480 },
-                    facingMode: 'environment'
-                }, 
-                audio: false 
-            });
-            
-            video.srcObject = stream;
-            
-            // Wait for video to load
-            await new Promise(resolve => {
-                video.onloadedmetadata = resolve;
-            });
-            
-            btnStart.disabled = true;
-            btnStop.disabled = false;
-            btnLive.disabled = false;
-            
-            Toast.show('Webcam started successfully!', 'success', 3000);
-        } catch (error) {
-            Toast.show('Error accessing webcam: ' + error.message, 'error', 4000);
-        } finally {
-            LoadingState.setLoading(btnStart, false);
-        }
-    });
-    
-    // Stop Webcam
-    btnStop.addEventListener('click', function() {
-        if (isLivePredicting) {
-            clearInterval(liveTimer);
-            liveTimer = null;
-            isLivePredicting = false;
-            btnLive.textContent = "Start Live Predict";
-        }
-        
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-            stream = null;
-        }
-        
-        video.srcObject = null;
-        btnStart.disabled = false;
-        btnStop.disabled = true;
-        btnLive.disabled = true;
-        
-        Toast.show('Webcam stopped', 'info', 3000);
-    });
-    
-    // Live Prediction
-    btnLive.addEventListener('click', function() {
-        if (!stream) {
-            Toast.show('Please start webcam first.', 'warning', 3000);
-            return;
-        }
-        
-        if (!isLivePredicting) {
-            isLivePredicting = true;
-            liveTimer = setInterval(sendFrame, 700);
-            btnLive.textContent = "Stop Live Predict";
-            btnLive.style.background = 'linear-gradient(90deg, #f56565 0%, #e53e3e 100%)';
-            Toast.show('Live prediction started', 'success', 3000);
+    setButtonLoading(button, isLoading, loadingText) {
+        if (isLoading) {
+            button.dataset.originalText = button.innerHTML;
+            button.innerHTML = loadingText;
+            button.disabled = true;
         } else {
-            isLivePredicting = false;
-            clearInterval(liveTimer);
-            liveTimer = null;
-            btnLive.textContent = "Start Live Predict";
-            btnLive.style.background = 'linear-gradient(90deg, #ed8936 0%, #dd6b20 100%)';
-            Toast.show('Live prediction stopped', 'info', 3000);
-        }
-    });
-    
-    async function sendFrame() {
-        if (!stream) return;
-        
-        const w = video.videoWidth;
-        const h = video.videoHeight;
-        if (!w || !h) return;
-        
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, w, h);
-        
-        try {
-            const blob = await new Promise(resolve => {
-                canvas.toBlob(resolve, 'image/jpeg', 0.85);
-            });
-            
-            const form = new FormData();
-            form.append("frame", blob, "frame.jpg");
-            
-            const response = await fetch("/predict-frame/", {
-                method: "POST",
-                body: form
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                camResult.innerHTML = ResultVisualizer.createResultHTML(data);
-                camResult.style.display = "block";
-                ResultVisualizer.animateConfidenceBars();
+            if (button.dataset.originalText) {
+                button.innerHTML = button.dataset.originalText;
             }
-        } catch (error) {
-            console.error('Prediction error:', error);
+            button.disabled = false;
         }
     }
 }
 
-function initializeButtons() {
-    // Add ripple effect to all buttons
-    document.querySelectorAll('button').forEach(button => {
-        button.addEventListener('click', function(e) {
-            const rect = this.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            
-            const ripple = document.createElement('span');
-            ripple.style.cssText = `
-                position: absolute;
-                border-radius: 50%;
-                background: rgba(255, 255, 255, 0.7);
-                transform: scale(0);
-                animation: ripple 0.6s linear;
-                pointer-events: none;
-                width: 100px;
-                height: 100px;
-                top: ${y - 50}px;
-                left: ${x - 50}px;
-            `;
-            
-            this.style.position = 'relative';
-            this.style.overflow = 'hidden';
-            this.appendChild(ripple);
-            
-            setTimeout(() => ripple.remove(), 600);
-        });
-    });
-}
-
-function initializeTheme() {
-    // Add CSS for ripple animation
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes ripple {
-            to {
-                transform: scale(4);
-                opacity: 0;
-            }
-        }
-    `;
-    document.head.appendChild(style);
-    
-    // Add keyboard shortcuts
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            const btnStop = document.getElementById('btnStop');
-            if (!btnStop.disabled) {
-                btnStop.click();
-            }
-        }
-        
-        if (e.key === ' ' && e.target === document.body) {
-            e.preventDefault();
-            const btnLive = document.getElementById('btnLive');
-            if (!btnLive.disabled) {
-                btnLive.click();
-            }
-        }
-    });
-    
-    // Add tooltips
-    const tooltips = {
-        'btnPredictUpload': 'Upload and analyze an image (Ctrl+U)',
-        'btnStart': 'Start webcam (Ctrl+W)',
-        'btnStop': 'Stop webcam (Esc)',
-        'btnLive': 'Toggle live prediction (Space)',
-        'fileInput': 'Select a skin image for analysis'
-    };
-    
-    Object.entries(tooltips).forEach(([id, text]) => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.title = text;
-        }
-    });
-}
-
-// Export for global use
-window.SkinDiseaseClassifier = {
-    Toast,
-    LoadingState,
-    ResultVisualizer
-};
-
-// Show welcome message
-window.addEventListener('load', function() {
-    setTimeout(() => {
-        Toast.show('Welcome to Skin Disease Classifier!', 'info', 4000);
-    }, 1000);
+// Initialize the application when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    // Create global app instance
+    window.app = new DermatologyAIApp();
 });
