@@ -585,7 +585,14 @@
     <div class="professional-footer">
       <p><strong>Dermatology AI Assistant</strong> – Bridging Technology and Dermatological Care</p>
       <div class="copyright">
-        &copy; 2024-2026 Adeolu Olofintuyi. All rights reserved.<br>
+        <script>
+          document.addEventListener("DOMContentLoaded", function() {
+            const currentYear = new Date().getFullYear();
+            document.querySelector(".copyright").innerHTML = 
+              `&copy; ${currentYear} Adeolu Olofintuyi. All rights reserved.<br>
+              <small>This software is for research and educational purposes.</small>`;
+          });
+        </script>
         <small>This software is for research and educational purposes.</small>
       </div>
     </div>
