@@ -49,158 +49,191 @@ class ToastSystem {
 }
 
 // Camera Manager with Front/Back Switching
+// Camera Manager with Front/Back Switching (Mobile-safe)
 class CameraManager {
     constructor(videoElement) {
         this.video = videoElement;
         this.stream = null;
-        this.currentCameraIndex = 0;
+
         this.availableDevices = [];
-        this.isCameraActive = false;
         this.devicesEnumerated = false;
+
+        // Prefer facingMode switching on mobile
+        this.currentFacingMode = 'user'; // 'user' (front) or 'environment' (back)
+
+        this.isCameraActive = false;
     }
-    
+
+    async ensurePermission() {
+        // Many browsers (esp iOS) will not fully reveal devices until permission is granted
+        if (this.stream) return;
+
+        try {
+            const tmpStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            // Stop immediately; this is just to unlock enumerateDevices reliability
+            tmpStream.getTracks().forEach(t => t.stop());
+        } catch (e) {
+            // If permission denied, bubble it up
+            throw e;
+        }
+    }
+
     async enumerateDevices() {
         try {
             const devices = await navigator.mediaDevices.enumerateDevices();
-            this.availableDevices = devices.filter(device => device.kind === 'videoinput');
-            console.log('Available cameras:', this.availableDevices);
+            this.availableDevices = devices.filter(d => d.kind === 'videoinput');
             this.devicesEnumerated = true;
+            console.log('Available cameras:', this.availableDevices);
             return this.availableDevices;
         } catch (error) {
             console.error('Error enumerating devices:', error);
+            this.availableDevices = [];
+            this.devicesEnumerated = false;
             return [];
         }
     }
-    
-    async startCamera(cameraType = null) {
+
+    stopCamera() {
+        if (this.stream) {
+            this.stream.getTracks().forEach(track => track.stop());
+        }
+        this.stream = null;
+        this.video.srcObject = null;
+        this.isCameraActive = false;
+    }
+
+    async startCamera({ facingMode = null, deviceId = null } = {}) {
+        // Stop existing stream first
         if (this.stream) {
             this.stopCamera();
         }
-        
-        // First, enumerate available devices if not done
-        if (!this.devicesEnumerated) {
-            await this.enumerateDevices();
-        }
-        
-        if (this.availableDevices.length === 0) {
-            throw new Error('No cameras found on device');
-        }
-        
+
+        // Ensure we have permission so enumerateDevices is reliable
+        await this.ensurePermission();
+
+        // Enumerate after permission
+        await this.enumerateDevices();
+
+        // Build constraints
+        const baseVideo = {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            frameRate: { ideal: 30 }
+        };
+
         let constraints;
-        
-        if (cameraType === 'user' || cameraType === 'environment') {
-            // Use facingMode for browsers that support it
+
+        if (deviceId) {
+            // Use deviceId only when explicitly chosen as a fallback
             constraints = {
-                video: {
-                    facingMode: cameraType,
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 },
-                    frameRate: { ideal: 30 }
-                },
+                video: { ...baseVideo, deviceId: { ideal: deviceId } },
                 audio: false
             };
         } else {
-            // Ensure currentCameraIndex is within bounds
-            if (this.currentCameraIndex >= this.availableDevices.length) {
-                this.currentCameraIndex = 0;
-            }
-            
+            const mode = facingMode || this.currentFacingMode;
+
+            // Prefer facingMode switching (most compatible on mobile)
             constraints = {
-                video: {
-                    deviceId: { exact: this.availableDevices[this.currentCameraIndex].deviceId },
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 },
-                    frameRate: { ideal: 30 }
-                },
+                video: { ...baseVideo, facingMode: { ideal: mode } },
                 audio: false
             };
         }
-        
+
         try {
             this.stream = await navigator.mediaDevices.getUserMedia(constraints);
             this.video.srcObject = this.stream;
             this.isCameraActive = true;
-            
-            // Wait for video to be ready
-            await new Promise((resolve) => {
-                if (this.video.readyState >= 3) {
-                    resolve();
-                } else {
-                    this.video.onloadedmetadata = resolve;
-                }
+
+            // Update facingMode from actual track settings when available
+            const track = this.stream.getVideoTracks()[0];
+            const settings = track?.getSettings?.() || {};
+            if (settings.facingMode) {
+                this.currentFacingMode = settings.facingMode;
+            }
+
+            await new Promise(resolve => {
+                if (this.video.readyState >= 3) resolve();
+                else this.video.onloadedmetadata = resolve;
             });
-            
+
             return true;
         } catch (error) {
-            console.error('Camera start failed:', error);
-            
-            // Try fallback to basic constraints
-            try {
-                this.stream = await navigator.mediaDevices.getUserMedia({
-                    video: true,
-                    audio: false
-                });
-                this.video.srcObject = this.stream;
-                this.isCameraActive = true;
-                return true;
-            } catch (secondError) {
-                throw secondError;
+            console.error('Camera start failed (primary):', error);
+
+            // Strong fallback: try exact facingMode (some browsers behave better with exact)
+            if (!deviceId) {
+                try {
+                    const mode = facingMode || this.currentFacingMode;
+                    this.stream = await navigator.mediaDevices.getUserMedia({
+                        video: { ...baseVideo, facingMode: { exact: mode } },
+                        audio: false
+                    });
+                    this.video.srcObject = this.stream;
+                    this.isCameraActive = true;
+                    return true;
+                } catch (e2) {
+                    console.error('Camera start failed (exact facingMode):', e2);
+                }
             }
+
+            // Last resort fallback: just video:true
+            this.stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            this.video.srcObject = this.stream;
+            this.isCameraActive = true;
+            return true;
         }
     }
-    
+
     async switchCamera() {
+        if (!this.isCameraActive) {
+            ToastSystem.show('Please start the camera first', 'warning', 3000);
+            return false;
+        }
+
+        // Attempt 1: toggle facingMode (best for mobile)
+        const nextFacing = (this.currentFacingMode === 'user') ? 'environment' : 'user';
+
+        try {
+            await this.startCamera({ facingMode: nextFacing });
+            this.currentFacingMode = nextFacing;
+            return true;
+        } catch (e) {
+            console.error('FacingMode switch failed, falling back to deviceId rotation:', e);
+        }
+
+        // Attempt 2: fallback to rotating deviceId list (works better on some Android devices)
+        await this.enumerateDevices();
         if (this.availableDevices.length < 2) {
             ToastSystem.show('Only one camera available on this device', 'info', 3000);
             return false;
         }
-        
-        // Stop current stream
-        if (this.stream) {
-            this.stream.getTracks().forEach(track => track.stop());
-        }
-        
-        // Switch to next camera
-        this.currentCameraIndex = (this.currentCameraIndex + 1) % this.availableDevices.length;
-        
-        // Restart with new camera
+
+        // Find current deviceId if possible
+        const currentTrack = this.stream?.getVideoTracks?.()[0];
+        const currentSettings = currentTrack?.getSettings?.() || {};
+        const currentDeviceId = currentSettings.deviceId;
+
+        let idx = this.availableDevices.findIndex(d => d.deviceId === currentDeviceId);
+        idx = (idx === -1) ? 0 : idx;
+        const nextIdx = (idx + 1) % this.availableDevices.length;
+
         try {
-            await this.startCamera();
+            await this.startCamera({ deviceId: this.availableDevices[nextIdx].deviceId });
             return true;
         } catch (error) {
-            console.error('Failed to switch camera:', error);
+            console.error('Failed to switch camera (deviceId fallback):', error);
             ToastSystem.show('Failed to switch camera', 'error', 3000);
             return false;
         }
     }
-    
+
     getCurrentCameraLabel() {
-        if (this.availableDevices.length === 0) return 'Unknown Camera';
-        if (this.availableDevices.length === 1) return 'Camera';
-        
-        const label = this.availableDevices[this.currentCameraIndex].label || 
-                     `Camera ${this.currentCameraIndex + 1}`;
-        
-        // Try to detect if it's front or back
-        if (label.toLowerCase().includes('front')) return 'Front Camera';
-        if (label.toLowerCase().includes('back') || label.toLowerCase().includes('rear')) return 'Back Camera';
-        if (label.toLowerCase().includes('environment')) return 'Back Camera';
-        if (label.toLowerCase().includes('user')) return 'Front Camera';
-        
-        return label;
+        // Labels are often empty on mobile; rely on facingMode where possible
+        if (this.currentFacingMode === 'user') return 'Front Camera';
+        if (this.currentFacingMode === 'environment') return 'Back Camera';
+        return 'Camera';
     }
-    
-    stopCamera() {
-        if (this.stream) {
-            this.stream.getTracks().forEach(track => {
-                track.stop();
-            });
-            this.stream = null;
-        }
-        this.video.srcObject = null;
-        this.isCameraActive = false;
-    }
-    
+
     isActive() {
         return this.isCameraActive;
     }

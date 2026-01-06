@@ -468,7 +468,7 @@
     <div class="professional-header">
       <h1>Dermatology AI Assistant</h1>
       <p class="subtitle">
-        Advanced computer vision technology for preliminary analysis of skin lesions. 
+        An educational computer vision technology for preliminary analysis of skin lesions. 
         Our AI assistant provides instant, non-invasive assessment to support healthcare decisions.
       </p>
       
@@ -542,7 +542,8 @@
         </div>
         
         <div class="video-container">
-          <video id="video" autoplay playsinline></video>
+          {% comment %} <video id="video" autoplay playsinline></video> {% endcomment %}
+          <video id="video" autoplay playsinline muted></video>
           <canvas id="canvas" style="display:none;"></canvas>
         </div>
         
