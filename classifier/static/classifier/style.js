@@ -48,192 +48,288 @@ class ToastSystem {
     }
 }
 
-// Camera Manager with Front/Back Switching
-// Camera Manager with Front/Back Switching (Mobile-safe)
+// Camera Manager with Front Camera Default and Better Mobile Support
 class CameraManager {
     constructor(videoElement) {
         this.video = videoElement;
         this.stream = null;
-
+        this.currentCameraIndex = 0;
         this.availableDevices = [];
-        this.devicesEnumerated = false;
-
-        // Prefer facingMode switching on mobile
-        this.currentFacingMode = 'user'; // 'user' (front) or 'environment' (back)
-
         this.isCameraActive = false;
+        this.devicesEnumerated = false;
+        this.currentFacingMode = 'user'; // Default to front camera
     }
-
-    async ensurePermission() {
-        // Many browsers (esp iOS) will not fully reveal devices until permission is granted
-        if (this.stream) return;
-
-        try {
-            const tmpStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-            // Stop immediately; this is just to unlock enumerateDevices reliability
-            tmpStream.getTracks().forEach(t => t.stop());
-        } catch (e) {
-            // If permission denied, bubble it up
-            throw e;
-        }
-    }
-
+    
     async enumerateDevices() {
         try {
+            // First, get user media to ensure we have permissions
+            // This is especially important on mobile
+            const tempStream = await navigator.mediaDevices.getUserMedia({ 
+                video: { width: { ideal: 640 }, height: { ideal: 480 } },
+                audio: false 
+            });
+            
+            // Stop the temp stream
+            tempStream.getTracks().forEach(track => track.stop());
+            
+            // Now enumerate devices with permissions granted
             const devices = await navigator.mediaDevices.enumerateDevices();
-            this.availableDevices = devices.filter(d => d.kind === 'videoinput');
+            this.availableDevices = devices.filter(device => device.kind === 'videoinput');
+            
+            // Try to identify front/back cameras better
+            this.availableDevices.forEach((device, index) => {
+                const label = device.label.toLowerCase();
+                if (label.includes('front') || label.includes('user') || label.includes('face')) {
+                    device.facingMode = 'user';
+                } else if (label.includes('back') || label.includes('rear') || label.includes('environment')) {
+                    device.facingMode = 'environment';
+                } else if (index === 0) {
+                    // First camera is often the front camera on mobile
+                    device.facingMode = 'user';
+                } else {
+                    device.facingMode = 'environment';
+                }
+            });
+            
+            // Sort devices so front cameras come first
+            this.availableDevices.sort((a, b) => {
+                const order = { 'user': 0, 'environment': 1 };
+                const aOrder = order[a.facingMode] || 2;
+                const bOrder = order[b.facingMode] || 2;
+                return aOrder - bOrder;
+            });
+            
+            console.log('Available cameras (sorted):', this.availableDevices);
             this.devicesEnumerated = true;
-            console.log('Available cameras:', this.availableDevices);
             return this.availableDevices;
         } catch (error) {
             console.error('Error enumerating devices:', error);
-            this.availableDevices = [];
-            this.devicesEnumerated = false;
-            return [];
+            // Fallback to basic enumeration
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                this.availableDevices = devices.filter(device => device.kind === 'videoinput');
+                this.devicesEnumerated = true;
+                return this.availableDevices;
+            } catch (fallbackError) {
+                console.error('Fallback enumeration failed:', fallbackError);
+                return [];
+            }
         }
     }
-
-    stopCamera() {
-        if (this.stream) {
-            this.stream.getTracks().forEach(track => track.stop());
-        }
-        this.stream = null;
-        this.video.srcObject = null;
-        this.isCameraActive = false;
-    }
-
-    async startCamera({ facingMode = null, deviceId = null } = {}) {
-        // Stop existing stream first
+    
+    async startCamera(deviceId = null) {
         if (this.stream) {
             this.stopCamera();
         }
-
-        // Ensure we have permission so enumerateDevices is reliable
-        await this.ensurePermission();
-
-        // Enumerate after permission
-        await this.enumerateDevices();
-
-        // Build constraints
-        const baseVideo = {
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            frameRate: { ideal: 30 }
-        };
-
-        let constraints;
-
-        if (deviceId) {
-            // Use deviceId only when explicitly chosen as a fallback
-            constraints = {
-                video: { ...baseVideo, deviceId: { ideal: deviceId } },
-                audio: false
-            };
-        } else {
-            const mode = facingMode || this.currentFacingMode;
-
-            // Prefer facingMode switching (most compatible on mobile)
-            constraints = {
-                video: { ...baseVideo, facingMode: { ideal: mode } },
-                audio: false
-            };
+        
+        // First, enumerate available devices if not done
+        if (!this.devicesEnumerated) {
+            await this.enumerateDevices();
         }
-
+        
+        if (this.availableDevices.length === 0) {
+            throw new Error('No cameras found on device');
+        }
+        
+        let constraints;
+        
+        // Try to find a front camera by default
+        if (!deviceId) {
+            const frontCamera = this.availableDevices.find(device => 
+                device.facingMode === 'user' || 
+                device.label.toLowerCase().includes('front') ||
+                device.label.toLowerCase().includes('user')
+            );
+            
+            if (frontCamera) {
+                this.currentCameraIndex = this.availableDevices.findIndex(d => d.deviceId === frontCamera.deviceId);
+                deviceId = frontCamera.deviceId;
+            } else {
+                // Fallback to first camera
+                this.currentCameraIndex = 0;
+                deviceId = this.availableDevices[0].deviceId;
+            }
+        }
+        
+        // Use deviceId for precise camera selection
+        constraints = {
+            video: {
+                deviceId: { exact: deviceId },
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                frameRate: { ideal: 30 }
+            },
+            audio: false
+        };
+        
         try {
             this.stream = await navigator.mediaDevices.getUserMedia(constraints);
             this.video.srcObject = this.stream;
             this.isCameraActive = true;
-
-            // Update facingMode from actual track settings when available
-            const track = this.stream.getVideoTracks()[0];
-            const settings = track?.getSettings?.() || {};
-            if (settings.facingMode) {
-                this.currentFacingMode = settings.facingMode;
+            
+            // Try to detect current facing mode
+            if (this.stream.getVideoTracks().length > 0) {
+                const track = this.stream.getVideoTracks()[0];
+                const settings = track.getSettings();
+                this.currentFacingMode = settings.facingMode || null;
             }
-
-            await new Promise(resolve => {
-                if (this.video.readyState >= 3) resolve();
-                else this.video.onloadedmetadata = resolve;
+            
+            // Wait for video to be ready
+            await new Promise((resolve) => {
+                if (this.video.readyState >= 3) {
+                    resolve();
+                } else {
+                    this.video.onloadedmetadata = resolve;
+                }
             });
-
+            
             return true;
         } catch (error) {
-            console.error('Camera start failed (primary):', error);
-
-            // Strong fallback: try exact facingMode (some browsers behave better with exact)
-            if (!deviceId) {
+            console.error('Camera start failed:', error);
+            
+            // Try fallback with facingMode
+            try {
+                constraints = {
+                    video: {
+                        facingMode: this.currentFacingMode || 'user',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        frameRate: { ideal: 30 }
+                    },
+                    audio: false
+                };
+                
+                this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+                this.video.srcObject = this.stream;
+                this.isCameraActive = true;
+                return true;
+            } catch (facingModeError) {
+                console.error('FacingMode fallback failed:', facingModeError);
+                
+                // Final fallback with simple constraints
                 try {
-                    const mode = facingMode || this.currentFacingMode;
                     this.stream = await navigator.mediaDevices.getUserMedia({
-                        video: { ...baseVideo, facingMode: { exact: mode } },
+                        video: true,
                         audio: false
                     });
                     this.video.srcObject = this.stream;
                     this.isCameraActive = true;
                     return true;
-                } catch (e2) {
-                    console.error('Camera start failed (exact facingMode):', e2);
+                } catch (simpleError) {
+                    console.error('Simple fallback failed:', simpleError);
+                    throw simpleError;
                 }
             }
-
-            // Last resort fallback: just video:true
-            this.stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-            this.video.srcObject = this.stream;
-            this.isCameraActive = true;
-            return true;
         }
     }
-
+    
     async switchCamera() {
         if (!this.isCameraActive) {
             ToastSystem.show('Please start the camera first', 'warning', 3000);
             return false;
         }
-
-        // Attempt 1: toggle facingMode (best for mobile)
-        const nextFacing = (this.currentFacingMode === 'user') ? 'environment' : 'user';
-
-        try {
-            await this.startCamera({ facingMode: nextFacing });
-            this.currentFacingMode = nextFacing;
-            return true;
-        } catch (e) {
-            console.error('FacingMode switch failed, falling back to deviceId rotation:', e);
-        }
-
-        // Attempt 2: fallback to rotating deviceId list (works better on some Android devices)
-        await this.enumerateDevices();
+        
         if (this.availableDevices.length < 2) {
             ToastSystem.show('Only one camera available on this device', 'info', 3000);
             return false;
         }
-
-        // Find current deviceId if possible
-        const currentTrack = this.stream?.getVideoTracks?.()[0];
-        const currentSettings = currentTrack?.getSettings?.() || {};
-        const currentDeviceId = currentSettings.deviceId;
-
-        let idx = this.availableDevices.findIndex(d => d.deviceId === currentDeviceId);
-        idx = (idx === -1) ? 0 : idx;
-        const nextIdx = (idx + 1) % this.availableDevices.length;
-
+        
+        // Stop current stream
+        if (this.stream) {
+            this.stream.getTracks().forEach(track => track.stop());
+        }
+        
+        // Determine which camera to switch to
+        const currentDevice = this.availableDevices[this.currentCameraIndex];
+        const currentLabel = currentDevice.label.toLowerCase();
+        
+        let nextDevice;
+        
+        if (currentLabel.includes('front') || currentLabel.includes('user') || 
+            (currentDevice.facingMode === 'user')) {
+            // Currently on front camera, switch to back
+            nextDevice = this.availableDevices.find(device => 
+                device.label.toLowerCase().includes('back') || 
+                device.label.toLowerCase().includes('rear') ||
+                device.label.toLowerCase().includes('environment') ||
+                device.facingMode === 'environment'
+            );
+        } else {
+            // Currently on back camera, switch to front
+            nextDevice = this.availableDevices.find(device => 
+                device.label.toLowerCase().includes('front') || 
+                device.label.toLowerCase().includes('user') ||
+                device.facingMode === 'user'
+            );
+        }
+        
+        // If no specific camera found, cycle to next
+        if (!nextDevice) {
+            this.currentCameraIndex = (this.currentCameraIndex + 1) % this.availableDevices.length;
+            nextDevice = this.availableDevices[this.currentCameraIndex];
+        } else {
+            this.currentCameraIndex = this.availableDevices.findIndex(d => d.deviceId === nextDevice.deviceId);
+        }
+        
+        // Update current facing mode
+        this.currentFacingMode = nextDevice.facingMode || 
+            (nextDevice.label.toLowerCase().includes('back') ? 'environment' : 'user');
+        
         try {
-            await this.startCamera({ deviceId: this.availableDevices[nextIdx].deviceId });
+            await this.startCamera(nextDevice.deviceId);
             return true;
         } catch (error) {
-            console.error('Failed to switch camera (deviceId fallback):', error);
-            ToastSystem.show('Failed to switch camera', 'error', 3000);
-            return false;
+            console.error('Failed to switch camera:', error);
+            
+            // Try alternative approach
+            try {
+                this.currentFacingMode = this.currentFacingMode === 'user' ? 'environment' : 'user';
+                await this.startCamera();
+                return true;
+            } catch (secondError) {
+                console.error('Alternative switch also failed:', secondError);
+                ToastSystem.show('Failed to switch camera', 'error', 3000);
+                return false;
+            }
         }
     }
-
+    
     getCurrentCameraLabel() {
-        // Labels are often empty on mobile; rely on facingMode where possible
-        if (this.currentFacingMode === 'user') return 'Front Camera';
-        if (this.currentFacingMode === 'environment') return 'Back Camera';
-        return 'Camera';
+        if (this.availableDevices.length === 0) return 'Unknown Camera';
+        
+        const device = this.availableDevices[this.currentCameraIndex];
+        const label = device.label || `Camera ${this.currentCameraIndex + 1}`;
+        
+        // Determine camera type
+        if (label.toLowerCase().includes('front') || label.toLowerCase().includes('user') || 
+            device.facingMode === 'user') {
+            return 'Front Camera';
+        }
+        if (label.toLowerCase().includes('back') || label.toLowerCase().includes('rear') || 
+            label.toLowerCase().includes('environment') || device.facingMode === 'environment') {
+            return 'Back Camera';
+        }
+        
+        // Guess based on index if multiple cameras
+        if (this.availableDevices.length > 1) {
+            return this.currentCameraIndex === 0 ? 'Front Camera' : 'Back Camera';
+        }
+        
+        return label;
     }
-
+    
+    stopCamera() {
+        if (this.stream) {
+            this.stream.getTracks().forEach(track => {
+                track.stop();
+            });
+            this.stream = null;
+        }
+        this.video.srcObject = null;
+        this.isCameraActive = false;
+        this.currentFacingMode = 'user'; // Reset to front camera default
+    }
+    
     isActive() {
         return this.isCameraActive;
     }
@@ -255,6 +351,7 @@ class DermatologyAIApp {
         this.uploadResult = document.getElementById('uploadResult');
         this.camResult = document.getElementById('camResult');
         this.scrollIndicator = document.getElementById('scrollIndicator');
+        this.debugInfo = document.getElementById('debugInfo');
         
         this.cameraManager = new CameraManager(this.video);
         this.liveTimer = null;
@@ -272,10 +369,42 @@ class DermatologyAIApp {
         // Setup mobile scroll indicator
         this.setupScrollIndicator();
         
+        // Try to enumerate devices on startup (for better mobile support)
+        this.enumerateDevicesOnStart();
+        
         // Show welcome message
         setTimeout(() => {
             ToastSystem.show('Welcome to Dermatology AI Assistant!', 'info', 3000);
         }, 1000);
+        
+        // Update debug info periodically
+        this.updateDebugInfo();
+    }
+    
+    async enumerateDevicesOnStart() {
+        try {
+            await this.cameraManager.enumerateDevices();
+            const deviceCount = this.cameraManager.availableDevices.length;
+            console.log('Devices enumerated on startup:', deviceCount);
+            
+            if (deviceCount > 0) {
+                ToastSystem.show(`Found ${deviceCount} camera(s)`, 'info', 2000);
+            }
+        } catch (error) {
+            console.warn('Could not enumerate devices on startup:', error);
+        }
+    }
+    
+    updateDebugInfo() {
+        if (!this.debugInfo) return;
+        
+        setInterval(() => {
+            if (this.cameraManager.devicesEnumerated) {
+                const devices = this.cameraManager.availableDevices;
+                const currentCamera = this.cameraManager.getCurrentCameraLabel();
+                this.debugInfo.textContent = `Cameras: ${devices.length} | Current: ${currentCamera}`;
+            }
+        }, 2000);
     }
     
     setupEventListeners() {
@@ -375,6 +504,12 @@ class DermatologyAIApp {
             this.btnSwitchCamera.disabled = false;
             this.setButtonLoading(this.btnStart, false, '<i class="fas fa-play"></i> Start Camera');
             
+            // Update switch button icon based on current camera
+            const isFrontCamera = this.cameraManager.getCurrentCameraLabel().toLowerCase().includes('front');
+            this.btnSwitchCamera.innerHTML = isFrontCamera ? 
+                '<i class="fas fa-camera"></i>' : 
+                '<i class="fas fa-camera-rotate"></i>';
+            
             ToastSystem.show(`${this.cameraManager.getCurrentCameraLabel()} started successfully`, 'success', 2000);
             
         } catch (error) {
@@ -422,27 +557,35 @@ class DermatologyAIApp {
             return;
         }
         
-        // Disable button during switch
-        this.btnSwitchCamera.disabled = true;
-        this.setButtonLoading(this.btnSwitchCamera, true, '<i class="fas fa-sync-alt fa-spin"></i>');
-        
         // Animate the switch button
         this.btnSwitchCamera.style.transform = 'rotate(180deg)';
+        this.btnSwitchCamera.style.transition = 'transform 0.5s ease';
+        
+        // Update button during switch
+        const originalHTML = this.btnSwitchCamera.innerHTML;
+        this.btnSwitchCamera.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i>';
+        this.btnSwitchCamera.disabled = true;
         
         try {
             const success = await this.cameraManager.switchCamera();
             
             if (success) {
+                // Update button icon based on current camera
+                const isFrontCamera = this.cameraManager.getCurrentCameraLabel().toLowerCase().includes('front');
+                this.btnSwitchCamera.innerHTML = isFrontCamera ? 
+                    '<i class="fas fa-camera"></i>' : 
+                    '<i class="fas fa-camera-rotate"></i>';
+                
                 ToastSystem.show(`Switched to ${this.cameraManager.getCurrentCameraLabel()}`, 'success', 2000);
             }
         } catch (error) {
             console.error('Camera switch error:', error);
             ToastSystem.show('Failed to switch camera', 'error', 3000);
+            this.btnSwitchCamera.innerHTML = originalHTML;
         } finally {
-            // Re-enable button
+            // Reset button animation and re-enable
             setTimeout(() => {
                 this.btnSwitchCamera.style.transform = 'rotate(0deg)';
-                this.setButtonLoading(this.btnSwitchCamera, false, '<i class="fas fa-sync-alt"></i>');
                 this.btnSwitchCamera.disabled = false;
             }, 500);
         }
