@@ -634,3 +634,51 @@ input[type="file"] {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+/* Mobile Touch Improvements */
+@media (max-width: 768px) {
+    button, input[type="file"], .camera-switch-btn {
+        min-height: 44px !important; /* Apple's recommended touch target size */
+        min-width: 44px !important;
+    }
+    
+    /* Improve file input for mobile */
+    #fileInput {
+        width: 100%;
+        padding: 15px;
+        border: 2px dashed #3498db;
+        border-radius: 10px;
+        background: #f8fafc;
+        font-size: 16px; /* Prevents iOS zoom */
+    }
+    
+    /* Better video display on mobile */
+    .video-container video {
+        transform: scaleX(-1); /* Mirror for front camera */
+    }
+    
+    /* Larger buttons for mobile */
+    .button-group button {
+        padding: 15px;
+        font-size: 16px;
+    }
+    
+    /* File preview adjustments */
+    .file-preview img {
+        max-width: 100% !important;
+        max-height: 250px !important;
+    }
+}
+
+/* Prevent text selection on mobile */
+* {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Allow text selection only where needed */
+input, textarea, .toast {
+    -webkit-user-select: text;
+    user-select: text;
+}

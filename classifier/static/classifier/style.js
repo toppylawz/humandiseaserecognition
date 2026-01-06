@@ -53,28 +53,68 @@ class CameraManager {
     constructor(videoElement) {
         this.video = videoElement;
         this.stream = null;
-        this.currentCamera = 'environment'; // 'environment' for back, 'user' for front
+        this.currentCameraIndex = 0;
+        this.availableDevices = [];
         this.isCameraActive = false;
+        this.devicesEnumerated = false;
+    }
+    
+    async enumerateDevices() {
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            this.availableDevices = devices.filter(device => device.kind === 'videoinput');
+            console.log('Available cameras:', this.availableDevices);
+            this.devicesEnumerated = true;
+            return this.availableDevices;
+        } catch (error) {
+            console.error('Error enumerating devices:', error);
+            return [];
+        }
     }
     
     async startCamera(cameraType = null) {
-        if (cameraType) {
-            this.currentCamera = cameraType;
-        }
-        
         if (this.stream) {
             this.stopCamera();
         }
         
-        const constraints = {
-            video: {
-                facingMode: this.currentCamera,
-                width: { ideal: 1280 },
-                height: { ideal: 720 },
-                frameRate: { ideal: 30 }
-            },
-            audio: false
-        };
+        // First, enumerate available devices if not done
+        if (!this.devicesEnumerated) {
+            await this.enumerateDevices();
+        }
+        
+        if (this.availableDevices.length === 0) {
+            throw new Error('No cameras found on device');
+        }
+        
+        let constraints;
+        
+        if (cameraType === 'user' || cameraType === 'environment') {
+            // Use facingMode for browsers that support it
+            constraints = {
+                video: {
+                    facingMode: cameraType,
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                    frameRate: { ideal: 30 }
+                },
+                audio: false
+            };
+        } else {
+            // Ensure currentCameraIndex is within bounds
+            if (this.currentCameraIndex >= this.availableDevices.length) {
+                this.currentCameraIndex = 0;
+            }
+            
+            constraints = {
+                video: {
+                    deviceId: { exact: this.availableDevices[this.currentCameraIndex].deviceId },
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                    frameRate: { ideal: 30 }
+                },
+                audio: false
+            };
+        }
         
         try {
             this.stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -94,7 +134,7 @@ class CameraManager {
         } catch (error) {
             console.error('Camera start failed:', error);
             
-            // Try with simpler constraints if facingMode fails
+            // Try fallback to basic constraints
             try {
                 this.stream = await navigator.mediaDevices.getUserMedia({
                     video: true,
@@ -109,14 +149,45 @@ class CameraManager {
         }
     }
     
-    switchCamera() {
-        // Toggle between front and back camera
-        this.currentCamera = this.currentCamera === 'environment' ? 'user' : 'environment';
-        return this.currentCamera;
+    async switchCamera() {
+        if (this.availableDevices.length < 2) {
+            ToastSystem.show('Only one camera available on this device', 'info', 3000);
+            return false;
+        }
+        
+        // Stop current stream
+        if (this.stream) {
+            this.stream.getTracks().forEach(track => track.stop());
+        }
+        
+        // Switch to next camera
+        this.currentCameraIndex = (this.currentCameraIndex + 1) % this.availableDevices.length;
+        
+        // Restart with new camera
+        try {
+            await this.startCamera();
+            return true;
+        } catch (error) {
+            console.error('Failed to switch camera:', error);
+            ToastSystem.show('Failed to switch camera', 'error', 3000);
+            return false;
+        }
     }
     
     getCurrentCameraLabel() {
-        return this.currentCamera === 'environment' ? 'Back Camera' : 'Front Camera';
+        if (this.availableDevices.length === 0) return 'Unknown Camera';
+        if (this.availableDevices.length === 1) return 'Camera';
+        
+        const label = this.availableDevices[this.currentCameraIndex].label || 
+                     `Camera ${this.currentCameraIndex + 1}`;
+        
+        // Try to detect if it's front or back
+        if (label.toLowerCase().includes('front')) return 'Front Camera';
+        if (label.toLowerCase().includes('back') || label.toLowerCase().includes('rear')) return 'Back Camera';
+        if (label.toLowerCase().includes('environment')) return 'Back Camera';
+        if (label.toLowerCase().includes('user')) return 'Front Camera';
+        
+        return label;
     }
     
     stopCamera() {
@@ -156,6 +227,7 @@ class DermatologyAIApp {
         this.liveTimer = null;
         this.isLivePredicting = false;
         this.currentFile = null;
+        this.currentBlobUrl = null;
         
         this.init();
     }
@@ -198,6 +270,17 @@ class DermatologyAIApp {
                 ToastSystem.show('Camera stopped due to page background', 'info', 3000);
             }
         });
+        
+        // Handle mobile orientation changes
+        window.addEventListener('orientationchange', () => {
+            // Small delay to allow orientation to complete
+            setTimeout(() => {
+                if (this.cameraManager.isActive()) {
+                    this.stopCamera();
+                    setTimeout(() => this.startCamera(), 300);
+                }
+            }, 300);
+        });
     }
     
     setupScrollIndicator() {
@@ -226,13 +309,23 @@ class DermatologyAIApp {
             return;
         }
         
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            this.previewImage.src = e.target.result;
-            this.filePreview.style.display = 'block';
-            ToastSystem.show('Image loaded for preview', 'info', 2000);
-        };
-        reader.readAsDataURL(file);
+        // Create blob URL for better mobile compatibility
+        const blobUrl = URL.createObjectURL(file);
+        this.previewImage.src = blobUrl;
+        this.filePreview.style.display = 'block';
+        
+        // Clean up previous blob URL if exists
+        if (this.currentBlobUrl) {
+            URL.revokeObjectURL(this.currentBlobUrl);
+        }
+        this.currentBlobUrl = blobUrl;
+        
+        // Mobile-specific adjustments
+        this.previewImage.style.maxWidth = '100%';
+        this.previewImage.style.maxHeight = '200px';
+        this.previewImage.style.objectFit = 'contain';
+        
+        ToastSystem.show('Image loaded for preview', 'info', 2000);
     }
     
     async startCamera() {
@@ -246,6 +339,7 @@ class DermatologyAIApp {
             this.btnStart.disabled = true;
             this.btnStop.disabled = false;
             this.btnLive.disabled = false;
+            this.btnSwitchCamera.disabled = false;
             this.setButtonLoading(this.btnStart, false, '<i class="fas fa-play"></i> Start Camera');
             
             ToastSystem.show(`${this.cameraManager.getCurrentCameraLabel()} started successfully`, 'success', 2000);
@@ -259,6 +353,8 @@ class DermatologyAIApp {
                 errorMessage += 'Please allow camera permissions.';
             } else if (error.name === 'NotFoundError') {
                 errorMessage += 'No camera found on your device.';
+            } else if (error.name === 'NotReadableError') {
+                errorMessage += 'Camera is in use by another application.';
             } else {
                 errorMessage += error.message;
             }
@@ -281,31 +377,42 @@ class DermatologyAIApp {
         this.btnStart.disabled = false;
         this.btnStop.disabled = true;
         this.btnLive.disabled = true;
+        this.btnSwitchCamera.disabled = true;
         this.btnLive.innerHTML = '<i class="fas fa-broadcast-tower"></i> Start Live Analysis';
         
         ToastSystem.show('Camera stopped', 'info', 2000);
     }
     
-    switchCamera() {
+    async switchCamera() {
         if (!this.cameraManager.isActive()) {
             ToastSystem.show('Please start the camera first', 'warning', 3000);
             return;
         }
         
+        // Disable button during switch
+        this.btnSwitchCamera.disabled = true;
+        this.setButtonLoading(this.btnSwitchCamera, true, '<i class="fas fa-sync-alt fa-spin"></i>');
+        
         // Animate the switch button
         this.btnSwitchCamera.style.transform = 'rotate(180deg)';
-        setTimeout(() => {
-            this.btnSwitchCamera.style.transform = 'rotate(0deg)';
-        }, 300);
         
-        // Switch camera
-        const newCamera = this.cameraManager.switchCamera();
-        ToastSystem.show(`Switching to ${this.cameraManager.getCurrentCameraLabel()}...`, 'info', 2000);
-        
-        // Restart with new camera
-        setTimeout(() => {
-            this.startCamera();
-        }, 500);
+        try {
+            const success = await this.cameraManager.switchCamera();
+            
+            if (success) {
+                ToastSystem.show(`Switched to ${this.cameraManager.getCurrentCameraLabel()}`, 'success', 2000);
+            }
+        } catch (error) {
+            console.error('Camera switch error:', error);
+            ToastSystem.show('Failed to switch camera', 'error', 3000);
+        } finally {
+            // Re-enable button
+            setTimeout(() => {
+                this.btnSwitchCamera.style.transform = 'rotate(0deg)';
+                this.setButtonLoading(this.btnSwitchCamera, false, '<i class="fas fa-sync-alt"></i>');
+                this.btnSwitchCamera.disabled = false;
+            }, 500);
+        }
     }
     
     async analyzeUpload() {
