@@ -33,7 +33,7 @@ def predict_upload(request):
 @csrf_exempt
 def predict_frame(request):
     """
-    Receives a single webcam JPEG frame (blob) and returns prediction.
+    Receives a single webcam JPEG frame and returns prediction.
     Frontend calls this repeatedly.
     """
     if request.method != "POST":

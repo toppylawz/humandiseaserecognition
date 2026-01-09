@@ -5,9 +5,6 @@ from ultralytics import YOLO
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# ----------------------------
-# Load models once (import-time)
-# ----------------------------
 DISEASE_MODEL_PATH = os.path.join(BASE_DIR, "ml", "yolo11_best.pt")
 GATE_MODEL_PATH    = os.path.join(BASE_DIR, "ml", "gate_best.pt")
 
@@ -16,9 +13,7 @@ GATE_MODEL    = YOLO(GATE_MODEL_PATH)
 
 UNKNOWN_LABEL = "UNKNOWN / Non-human or invalid input"
 
-# ----------------------------
-# Disease class names (stable)
-# ----------------------------
+# Disease class names
 CLASSES_TXT = os.path.join(BASE_DIR, "ml", "classes.txt")
 
 def _disease_classes():
@@ -29,19 +24,19 @@ def _disease_classes():
       2) DISEASE_MODEL.names (from weights)
       3) fallback class_0..class_{nc-1}
     """
-    # 1) classes.txt if present
+    # classes.txt if present
     if os.path.exists(CLASSES_TXT):
         with open(CLASSES_TXT, "r", encoding="utf-8") as f:
             names = [ln.strip() for ln in f if ln.strip()]
         if names:
             return names
 
-    # 2) from model weights
+    # from model weights
     names = getattr(DISEASE_MODEL, "names", None)
     if isinstance(names, dict) and names:
         ordered = [names[i] for i in sorted(names.keys())]
 
-        # Optional: write classes.txt so next start is stable
+        # write classes.txt so next start is stable
         try:
             os.makedirs(os.path.dirname(CLASSES_TXT), exist_ok=True)
             with open(CLASSES_TXT, "w", encoding="utf-8") as f:
@@ -54,7 +49,7 @@ def _disease_classes():
     if isinstance(names, list) and names:
         return names
 
-    # 3) fallback
+    # fallback
     try:
         nc = int(getattr(DISEASE_MODEL.model, "nc", 0))
     except Exception:
@@ -69,9 +64,7 @@ if not DISEASE_CLASSES:
     raise RuntimeError("Could not load disease classes from classes.txt or model.names.")
 
 
-# ----------------------------
-# Gate class names (dynamic)
-# ----------------------------
+# Gate class names 
 def _gate_classes_from_model():
     """
     Returns gate classes in correct index order using GATE_MODEL.names.
@@ -136,7 +129,7 @@ def predict_pil_image(pil_img: Image.Image, topk: int = 5, gate_thresh: float = 
         if pil_img.mode != "RGB":
             pil_img = pil_img.convert("RGB")
 
-        # 1) Gate
+        # Gate
         ok, gate_diag = gate_check(pil_img, thresh=gate_thresh)
         if not ok:
             return {
@@ -147,7 +140,7 @@ def predict_pil_image(pil_img: Image.Image, topk: int = 5, gate_thresh: float = 
                 "top5": []
             }
 
-        # 2) Disease classifier
+        # Disease classifier
         res = DISEASE_MODEL.predict(pil_img, verbose=False)[0]
         if not hasattr(res, "probs") or res.probs is None:
             return {"error": "Disease model returned no classification probabilities."}
