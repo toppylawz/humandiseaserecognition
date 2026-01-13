@@ -1,0 +1,302 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}AI Dermatology Analyzer | Real-time Skin Analysis{% endblock %}
+
+{% block meta_description %}Use our AI-powered dermatology analyzer for real-time skin lesion analysis. Upload images or use live camera feed for instant preliminary assessment.{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/analyzer.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div id="analyzerPage"
+     data-predict-url="{% url 'predict' %}"
+     data-predict-frame-url="{% url 'predict_frame' %}">
+</div>
+
+<!-- Analyzer Header -->
+<section class="analyzer-header section-padding">
+    <div class="container">
+        <div class="analyzer-header-content">
+            <div class="analyzer-intro">
+                <span class="section-label">Live Analysis</span>
+                <h1>AI Dermatology Analyzer</h1>
+                <p class="subtitle">Upload an image or use real-time camera analysis for instant preliminary assessment of dermatological conditions.</p>
+                
+                <div class="analyzer-features">
+                    <div class="feature-badge">
+                        <i class="fas fa-camera"></i>
+                        <span>Live Camera</span>
+                    </div>
+                    <div class="feature-badge">
+                        <i class="fas fa-upload"></i>
+                        <span>Image Upload</span>
+                    </div>
+                    <div class="feature-badge">
+                        <i class="fas fa-brain"></i>
+                        <span>AI Analysis</span>
+                    </div>
+                    <div class="feature-badge">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Top-5 Results</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="analyzer-stats">
+                <div class="stat-card">
+                    <i class="fas fa-clock"></i>
+                    <div>
+                        <h3>&lt; 2 Seconds</h3>
+                        <p>Analysis Time</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-check-circle"></i>
+                    <div>
+                        <h3>98.62%</h3>
+                        <p>Validation Accuracy</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-database"></i>
+                    <div>
+                        <h3>260,000+</h3>
+                        <p>Images</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Main Analyzer Section -->
+<section class="analyzer-main section-padding">
+    <div class="container">
+        <div class="analyzer-grid">
+            <!-- Left Column: Image Upload -->
+            <div class="analyzer-column">
+                <div class="analyzer-card">
+                    <div class="card-header">
+                        <i class="fas fa-file-image"></i>
+                        <h3>Image Analysis</h3>
+                    </div>
+                    
+                    <div class="card-body">
+                        <div class="upload-area" id="uploadArea">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <h4>Upload Dermatological Image</h4>
+                            <p>Drag & drop or click to browse</p>
+                            <input type="file" id="fileInput" accept="image/*" hidden>
+                            <button class="btn btn-outline" id="browseBtn">
+                                <i class="fas fa-folder-open"></i> Browse Files
+                            </button>
+                            <p class="file-hint">JPG, PNG, WEBP | Max 10MB</p>
+                        </div>
+                        
+                        <!-- File Preview -->
+                        <div id="filePreview" class="file-preview" style="display: none;">
+                            <div class="preview-header">
+                                <h4>Image Preview</h4>
+                                <button class="btn-small" id="clearPreview">
+                                    <i class="fas fa-times"></i> Clear
+                                </button>
+                            </div>
+                            <img id="previewImage" src="" alt="Image preview">
+                            <p class="preview-info">Ready for analysis</p>
+                        </div>
+                        
+                        <!-- Analysis Button -->
+                        <div class="analyze-action">
+                            <button id="btnPredictUpload" class="btn btn-primary btn-block">
+                                <i class="fas fa-search"></i> Analyse Image
+                            </button>
+                        </div>
+                        
+                        <!-- Upload Results -->
+                        <div id="uploadResult" class="result-card">
+                            <!-- Results will appear here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="info-card">
+                    <h4><i class="fas fa-lightbulb"></i> Tips for Best Results</h4>
+                    <ul>
+                        <li>Use clear, well-lit images</li>
+                        <li>Focus on the affected area</li>
+                        <li>Avoid shadows and glare</li>
+                        <li>Include some surrounding skin for context</li>
+                        <li>Capture from multiple angles if possible</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Right Column: Camera Analysis -->
+            <div class="analyzer-column">
+                <div class="analyzer-card">
+                    <div class="card-header">
+                        <i class="fas fa-video"></i>
+                        <h3>Live Camera Analysis</h3>
+                    </div>
+                    
+                    <div class="card-body">
+                        <!-- Camera Switch -->
+                        <div class="camera-switch-container">
+                            <button id="btnSwitchCamera" class="camera-switch-btn" title="Switch between front and back camera">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                            <span id="cameraLabel">Front Camera</span>
+                        </div>
+                        
+                        <!-- Video Container -->
+                        <div class="video-container">
+                            <video id="video" autoplay playsinline></video>
+                            <div class="video-overlay">
+                                <div class="focus-frame"></div>
+                                <div class="recording-indicator" id="recordingIndicator">
+                                    <div class="pulse"></div>
+                                    <span>Live Analysis Active</span>
+                                </div>
+                            </div>
+                            <canvas id="canvas" style="display:none;"></canvas>
+                        </div>
+                        
+                        <!-- Camera Controls -->
+                        <div class="camera-controls">
+                            <button id="btnStart" class="btn btn-success">
+                                <i class="fas fa-play"></i> Start Camera
+                            </button>
+                            <button id="btnStop" disabled class="btn btn-danger">
+                                <i class="fas fa-stop"></i> Stop Camera
+                            </button>
+                            <button id="btnLive" disabled class="btn btn-warning">
+                                <i class="fas fa-broadcast-tower"></i> Start Live Analysis
+                            </button>
+                        </div>
+                        
+                        <!-- Live Results -->
+                        <div id="camResult" class="result-card">
+                            <!-- Results will appear here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="info-card warning-card">
+                    <h4><i class="fas fa-exclamation-triangle"></i> Important Notice</h4>
+                    <p>This tool provides preliminary analysis for educational and research purposes only. It is not a substitute for professional medical diagnosis. Always consult a qualified dermatologist for medical concerns.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- How to Use Section -->
+<section class="instructions section-padding">
+    <div class="container">
+        <div class="section-header">
+            <h2>How to Use the Analyser</h2>
+            <p class="section-subtitle">Follow these steps for optimal results</p>
+        </div>
+    </br>
+        
+        <div class="instructions-grid">
+            <div class="instruction-step">
+                <div class="step-number">1</div>
+                <h3>Choose Your Method</h3>
+                <p>Select between image upload for existing photos or live camera analysis for real-time assessment.</p>
+            </div>
+            
+            <div class="instruction-step">
+                <div class="step-number">2</div>
+                <h3>Capture/Upload Image</h3>
+                <p>For camera analysis, position the lesion in the center frame. For upload, select a clear, well-lit image.</p>
+            </div>
+            
+            <div class="instruction-step">
+                <div class="step-number">3</div>
+                <h3>Start Analysis</h3>
+                <p>Click "Analyze Image" or "Start Live Analysis" to begin AI processing.</p>
+            </div>
+            
+            <div class="instruction-step">
+                <div class="step-number">4</div>
+                <h3>Review Results</h3>
+                <p>Examine the top predictions with confidence scores and differential diagnosis.</p>
+            </div>
+        </div>
+    </div>
+</section>
+</br>
+{% endblock %}
+
+{% block extra_js %}
+<!-- analyzer JavaScript -->
+<script src="{% static 'js/analyzer.js' %}"></script>
+
+<script>
+    // Additional analyzer page functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        // File upload area interaction
+        const uploadArea = document.getElementById('uploadArea');
+        const browseBtn = document.getElementById('browseBtn');
+        const fileInput = document.getElementById('fileInput');
+        const clearPreview = document.getElementById('clearPreview');
+        
+        if (browseBtn && fileInput) {
+            browseBtn.addEventListener('click', () => fileInput.click());
+        }
+        
+        if (uploadArea && fileInput) {
+            uploadArea.addEventListener('click', () => fileInput.click());
+            
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.style.borderColor = 'var(--primary-color)';
+                uploadArea.style.backgroundColor = 'var(--primary-light)';
+            });
+            
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.style.borderColor = 'var(--gray-300)';
+                uploadArea.style.backgroundColor = 'var(--gray-50)';
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.style.borderColor = 'var(--gray-300)';
+                uploadArea.style.backgroundColor = 'var(--gray-50)';
+                
+                if (e.dataTransfer.files.length) {
+                    fileInput.files = e.dataTransfer.files;
+                    // Trigger change event
+                    const event = new Event('change', { bubbles: true });
+                    fileInput.dispatchEvent(event);
+                }
+            });
+        }
+        
+        if (clearPreview) {
+            clearPreview.addEventListener('click', () => {
+                const filePreview = document.getElementById('filePreview');
+                const previewImage = document.getElementById('previewImage');
+                filePreview.style.display = 'none';
+                previewImage.src = '';
+                fileInput.value = '';
+            });
+        }
+        
+        // Update camera label based on current camera
+        function updateCameraLabel() {
+            const cameraLabel = document.getElementById('cameraLabel');
+            if (window.app && window.app.cameraManager) {
+                cameraLabel.textContent = window.app.cameraManager.getCurrentCameraLabel();
+            }
+        }
+        
+        // Monitor camera changes
+        setInterval(updateCameraLabel, 1000);
+    });
+</script>
+{% endblock %}

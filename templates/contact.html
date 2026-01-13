@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Contact | Insighta AI Research Partnership{% endblock %}
+
+{% block meta_description %}Contact our research team, explore collaboration opportunities, and join our efforts in advancing AI dermatology research. Partnership inquiries welcome from clinicians, researchers, and institutions.{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/contact.css' %}">
+{% endblock %}
+
+{% block content %}
+<!-- Contact Hero -->
+<section class="contact-hero section-padding">
+    <div class="container">
+        <div class="contact-hero-content">
+            <div class="contact-hero-text">
+                <span class="section-label">Contact Us</span>
+                <h1>Use the form below to contact us for any information, collaboration</h1>
+            </div>
+            <div class="contact-hero-image">
+                <div class="collaboration-visual">
+                    <i class="fas fa-handshake" style="font-size: 5rem; color: var(--primary-color);"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Contact Form & Details -->
+<section class="section-padding contact-section" id="contact">
+    <div class="container">
+        <div class="contact-grid">
+            <!-- Contact Form -->
+            <div class="contact-form-container">
+                <div class="section-header">
+                    <h2>Get in Touch</h2>
+                    <p class="section-subtitle">Send us a message to discuss collaboration or research inquiries</p>
+                </div>
+                
+                <form id="contactForm" class="contact-form" method="post" action="{% url 'contact_submit' %}">
+                    {% csrf_token %}
+                
+                    <div class="form-group">
+                        <label for="name">Full Name *</label>
+                        <input type="text" id="name" name="name" required placeholder="Dr. Jane Smith">
+                    </div>
+                
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="email">Email Address *</label>
+                            <input type="email" id="email" name="email" required placeholder="jane.smith@institution.edu">
+                        </div>
+                
+                        <div class="form-group">
+                            <label for="organization">Organization</label>
+                            <input type="text" id="organization" name="organization" placeholder="University Hospital">
+                        </div>
+                    </div>
+                
+                    <div class="form-group">
+                        <label for="collaboration_type">Interest Area *</label>
+                        <select id="collaboration_type" name="collaboration_type" required>
+                            <option value="">Select an area of interest</option>
+                            <option value="clinical">Clinical Validation & Testing</option>
+                            <option value="data">Job offer</option>
+                            <option value="technical">Technical Development</option>
+                            <option value="research">Joint Research Project</option>
+                            <option value="other">Others</option>
+                        </select>
+                    </div>
+                
+                    <div class="form-group">
+                        <label for="message">Message *</label>
+                        <textarea id="message" name="message" rows="5" required></textarea>
+                    </div>
+                
+                    <div class="form-footer">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i> Send Message
+                        </button>
+                        <p class="form-note">We typically respond within 2-3 business days.</p>
+                    </div>
+                </form>                
+            </div>
+            
+            <!-- Contact Details -->
+            <div class="contact-details">
+                <div class="details-card">
+                    <h3>Direct Contact</h3>
+                    
+                    <div class="contact-item">
+                        <div class="contact-icon">
+                            <i class="fas fa-user-graduate"></i>
+                        </div>
+                        <div class="contact-info">
+                            <h4>Researcher</h4>
+                            <p>Adeolu Olofintuyi</p>
+                            <a href="mailto:adeolu@techwagon.org" class="contact-link">
+                                <i class="fas fa-envelope"></i> adeolu@techwagon.org
+                            </a>
+                            <p class="contact-note">
+                                <i class="fas fa-university"></i> Sheffield Hallam University
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="contact-item">
+                        <div class="contact-icon">
+                            <i class="fas fa-chalkboard-teacher"></i>
+                        </div>
+                        <div class="contact-info">
+                            <h4>Project Supervisor</h4>
+                            <p>Dr. Ajmal Gharib</p>
+                            <a href="mailto:A.Gharib@shu.ac.uk" class="contact-link">
+                                <i class="fas fa-envelope"></i> A.Gharib@shu.ac.uk
+                            </a>
+                            <p class="contact-note">
+                                <i class="fas fa-university"></i> Sheffield Hallam University
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="contact-method">
+                        <h4>Preferred Contact Method</h4>
+                        <p>For initial inquiries, please use the contact form or email. For ongoing collaborations, we can arrange video calls or in-person meetings.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+</br>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const form = document.getElementById("contactForm");
+      if (!form) return;
+    
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+    
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalBtnHtml = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+    
+        try {
+          const formData = new FormData(form);
+    
+          const response = await fetch(form.action, {
+            method: "POST",
+            body: formData,
+            credentials: "same-origin",
+            headers: {
+              "X-Requested-With": "XMLHttpRequest"
+            }
+          });
+    
+          const data = await response.json().catch(() => ({}));
+    
+          if (!response.ok || !data.ok) {
+            const errors = data.errors ? JSON.stringify(data.errors) : "Please check your inputs and try again.";
+            alert("Message not sent: " + errors);
+            return;
+          }
+    
+          alert(data.message || "Thank you. Your message has been sent.");
+          form.reset();
+    
+        } catch (err) {
+          alert("Network error. Please try again.");
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalBtnHtml;
+        }
+      });
+    });
+    </script>
+    
+{% endblock %}

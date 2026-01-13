@@ -5,6 +5,7 @@ from ultralytics import YOLO
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# Model paths
 DISEASE_MODEL_PATH = os.path.join(BASE_DIR, "ml", "yolo11_best.pt")
 GATE_MODEL_PATH    = os.path.join(BASE_DIR, "ml", "gate_best.pt")
 
@@ -13,161 +14,175 @@ GATE_MODEL    = YOLO(GATE_MODEL_PATH)
 
 UNKNOWN_LABEL = "UNKNOWN / Non-human or invalid input"
 
-# Disease class names
-CLASSES_TXT = os.path.join(BASE_DIR, "ml", "classes.txt")
+# this is optional deterministic label files
+DISEASE_CLASSES_TXT = os.path.join(BASE_DIR, "ml", "classes.txt")
+GATE_CLASSES_TXT    = os.path.join(BASE_DIR, "ml", "gate_classes.txt")
 
-def _disease_classes():
-    """
-    Load disease class names in correct index order.
-    Priority:
-      1) ml/classes.txt (deterministic)
-      2) DISEASE_MODEL.names (from weights)
-      3) fallback class_0..class_{nc-1}
-    """
-    # classes.txt if present
-    if os.path.exists(CLASSES_TXT):
-        with open(CLASSES_TXT, "r", encoding="utf-8") as f:
-            names = [ln.strip() for ln in f if ln.strip()]
-        if names:
-            return names
 
-    # from model weights
-    names = getattr(DISEASE_MODEL, "names", None)
+def _load_labels(txt_path: str, model: YOLO):
+    """
+    Returns labels in correct index order:
+    1) from txt file (one per line) if present and non-empty
+    2) from model.names (dict or list)
+    3) empty list
+    """
+    # From txt
+    if os.path.exists(txt_path):
+        with open(txt_path, "r", encoding="utf-8") as f:
+            labels = [ln.strip() for ln in f if ln.strip()]
+        if labels:
+            return labels
+
+    # From model.names
+    names = getattr(model, "names", None)
     if isinstance(names, dict) and names:
-        ordered = [names[i] for i in sorted(names.keys())]
-
-        # write classes.txt so next start is stable
-        try:
-            os.makedirs(os.path.dirname(CLASSES_TXT), exist_ok=True)
-            with open(CLASSES_TXT, "w", encoding="utf-8") as f:
-                f.write("\n".join(ordered) + "\n")
-        except Exception:
-            pass
-
-        return ordered
-
-    if isinstance(names, list) and names:
-        return names
-
-    # fallback
-    try:
-        nc = int(getattr(DISEASE_MODEL.model, "nc", 0))
-    except Exception:
-        nc = 0
-
-    return [f"class_{i}" for i in range(max(nc, 0))]
-
-
-DISEASE_CLASSES = _disease_classes()
-
-if not DISEASE_CLASSES:
-    raise RuntimeError("Could not load disease classes from classes.txt or model.names.")
-
-
-# Gate class names 
-def _gate_classes_from_model():
-    """
-    Returns gate classes in correct index order using GATE_MODEL.names.
-    This avoids class-order mistakes.
-    """
-    names = getattr(GATE_MODEL, "names", None)
-    if isinstance(names, dict):
         return [names[i] for i in sorted(names.keys())]
     if isinstance(names, list) and names:
         return names
+
     return []
 
 
-GATE_CLASSES = _gate_classes_from_model()
+DISEASE_CLASSES = _load_labels(DISEASE_CLASSES_TXT, DISEASE_MODEL)
+GATE_CLASSES    = _load_labels(GATE_CLASSES_TXT, GATE_MODEL)
 
 
-def gate_check(pil_img: Image.Image, thresh: float = 0.70):
+def _softmax_entropy(probs: np.ndarray) -> float:
+    p = np.clip(probs, 1e-12, 1.0)
+    return float(-(p * np.log(p)).sum())
+
+
+def gate_check(pil_img: Image.Image,
+               accept_thresh: float = 0.70,
+               reject_thresh: float = 0.80):
     """
-    Returns (ok: bool, diagnostics: dict)
-    ok=True means "valid_skin" confidently detected.
-    ok=False means reject (nonhuman or uncertain).
+    Returns (status, diag)
+    status in {"accept", "reject", "uncertain"}.
+
+    Policy:
+    - accept if gate predicts valid_skin with conf >= accept_thresh
+    - reject if gate predicts nonhuman with conf >= reject_thresh
+    - otherwise uncertain
     """
     r = GATE_MODEL.predict(pil_img, verbose=False)[0]
     if not hasattr(r, "probs") or r.probs is None:
-        return False, {"reason": "gate_no_probs"}
+        return "uncertain", {"reason": "gate_no_probs"}
 
     probs = r.probs.data.cpu().numpy()
     top1 = int(r.probs.top1)
     conf = float(probs[top1])
 
-    # Safe class label resolution
-    if GATE_CLASSES and top1 < len(GATE_CLASSES):
-        label = GATE_CLASSES[top1]
-    else:
-        label = f"class_{top1}"
+    label = GATE_CLASSES[top1] if (GATE_CLASSES and top1 < len(GATE_CLASSES)) else f"class_{top1}"
+    label_l = label.lower()
 
-    diag = {"gate_label": label, "gate_conf": conf, "gate_thresh": float(thresh)}
+    diag = {
+        "gate_label": label,
+        "gate_conf": conf,
+        "accept_thresh": float(accept_thresh),
+        "reject_thresh": float(reject_thresh),
+    }
 
-    # Primary policy:
-    # - accept only if confident "valid_skin"
-    # - reject otherwise (includes confident nonhuman + uncertain)
-    if label.lower() == "valid_skin" and conf >= thresh:
-        return True, diag
+    if label_l == "valid_skin" and conf >= accept_thresh:
+        return "accept", diag
 
-    if label.lower() == "nonhuman" and conf >= thresh:
-        diag["reason"] = "gate_nonhuman"
-        return False, diag
+    if label_l == "nonhuman" and conf >= reject_thresh:
+        diag["reason"] = "confident_nonhuman"
+        return "reject", diag
 
-    diag["reason"] = "gate_uncertain"
-    return False, diag
+    diag["reason"] = "uncertain_gate"
+    return "uncertain", diag
 
 
-def predict_pil_image(pil_img: Image.Image, topk: int = 5, gate_thresh: float = 0.70):
+def disease_predict(pil_img: Image.Image, topk: int = 5):
+    r = DISEASE_MODEL.predict(pil_img, verbose=False)[0]
+    if not hasattr(r, "probs") or r.probs is None:
+        return {"error": "Disease model returned no classification probabilities."}
+
+    probs = r.probs.data.cpu().numpy()
+    num_classes = int(probs.shape[0])
+
+    names = DISEASE_CLASSES if (DISEASE_CLASSES and len(DISEASE_CLASSES) == num_classes) else [f"class_{i}" for i in range(num_classes)]
+
+    top1_idx = int(r.probs.top1)
+    top1_conf = float(getattr(r.probs, "top1conf", probs[top1_idx]))
+    ent = _softmax_entropy(probs)
+
+    k = int(max(1, min(int(topk), num_classes)))
+    topk_idx = np.argsort(-probs)[:k]
+    top5 = [{"label": names[int(i)], "confidence": float(probs[int(i)])} for i in topk_idx]
+
+    return {
+        "top1": {"label": names[top1_idx], "confidence": top1_conf},
+        "top5": top5,
+        "entropy": float(ent),
+    }
+
+
+def predict_pil_image(pil_img: Image.Image,
+                      topk: int = 5,
+                      gate_accept_thresh: float = 0.70,
+                      gate_reject_thresh: float = 0.80,
+                      disease_min_conf_if_uncertain: float = 0.65,
+                      disease_entropy_max_if_uncertain: float = 2.50):
     """
-    Main prediction used by views.py.
-    Always returns JSON-serialisable dict:
-    - rejected=True: do not show disease output
-    - rejected=False: includes top1/top5 disease classes
-    - error: for unexpected exceptions
+    Main function used by Django views.
+
+    - If gate ACCEPT: run disease model normally.
+    - If gate REJECT: return rejected=True (UNKNOWN).
+    - If gate UNCERTAIN: run disease model, but only accept disease output if it is confident and low-entropy;
+      otherwise reject as UNKNOWN. This reduces rubbish predictions without blocking real skin too aggressively.
     """
     try:
         if pil_img.mode != "RGB":
             pil_img = pil_img.convert("RGB")
 
-        # Gate
-        ok, gate_diag = gate_check(pil_img, thresh=gate_thresh)
-        if not ok:
+        status, gate_diag = gate_check(
+            pil_img,
+            accept_thresh=gate_accept_thresh,
+            reject_thresh=gate_reject_thresh
+        )
+
+        if status == "reject":
             return {
                 "rejected": True,
                 "label": UNKNOWN_LABEL,
                 "confidence": float(gate_diag.get("gate_conf", 0.0)),
-                "diagnostics": gate_diag,
+                "diagnostics": {"gate": gate_diag},
                 "top5": []
             }
 
-        # Disease classifier
-        res = DISEASE_MODEL.predict(pil_img, verbose=False)[0]
-        if not hasattr(res, "probs") or res.probs is None:
-            return {"error": "Disease model returned no classification probabilities."}
+        d = disease_predict(pil_img, topk=topk)
+        if "error" in d:
+            return d
 
-        probs = res.probs.data.cpu().numpy()
-        num_classes = int(probs.shape[0])
+        # If gate uncertain, apply stricter acceptance
+        if status == "uncertain":
+            top1_conf = float(d["top1"]["confidence"])
+            ent = float(d["entropy"])
 
-        # Ensure disease class length matches model output size
-        if len(DISEASE_CLASSES) != num_classes:
-            # Fallback prevents crash; but you should fix classes.txt order/length.
-            names = [f"class_{i}" for i in range(num_classes)]
-        else:
-            names = DISEASE_CLASSES
-
-        top1_idx = int(res.probs.top1)
-        top1_conf = float(getattr(res.probs, "top1conf", probs[top1_idx]))
-
-        k = int(max(1, min(int(topk), num_classes)))
-        topk_idx = np.argsort(-probs)[:k]
-
-        top5 = [{"label": names[int(i)], "confidence": float(probs[int(i)])} for i in topk_idx]
+            if (top1_conf < disease_min_conf_if_uncertain) or (ent > disease_entropy_max_if_uncertain):
+                return {
+                    "rejected": True,
+                    "label": UNKNOWN_LABEL,
+                    "confidence": top1_conf,
+                    "diagnostics": {
+                        "gate": gate_diag,
+                        "disease_top1_conf": top1_conf,
+                        "disease_entropy": ent,
+                        "policy": "uncertain_gate_strict_filter"
+                    },
+                    "top5": []
+                }
 
         return {
             "rejected": False,
-            "top1": {"label": names[top1_idx], "confidence": top1_conf},
-            "top5": top5,
-            "diagnostics": {"gate": gate_diag}
+            "top1": d["top1"],
+            "top5": d["top5"],
+            "diagnostics": {
+                "gate": gate_diag,
+                "disease_entropy": d["entropy"],
+                "gate_status": status
+            }
         }
 
     except Exception as e:

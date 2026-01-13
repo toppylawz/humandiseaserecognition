@@ -1,0 +1,294 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block title %}Privacy Policy & Terms of Use | Insighta AI Assistant{% endblock %}
+
+{% block meta_description %}Privacy policy, terms of use, and medical disclaimer for the Insighta AI Assistant research tool. Learn about data handling, limitations, and ethical guidelines.{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/privacy.css' %}">
+{% endblock %}
+
+{% block content %}
+<!-- Privacy Header -->
+<section class="privacy-hero section-padding">
+    <div class="container">
+        <div class="privacy-header">
+            <h1>Privacy Policy & Terms of Use</h1>
+            <p class="subtitle">Important information about data handling, limitations, and ethical use of our research tool</p>
+            <div class="last-updated">
+                <i class="fas fa-calendar-alt"></i> Last updated: {% now "F j, Y" %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Navigation Tabs -->
+<section class="privacy-nav">
+    <div class="container">
+        <div class="privacy-tabs">
+            <a href="#privacy" class="privacy-tab active">Privacy Policy</a>
+            <a href="#terms" class="privacy-tab">Terms of Use</a>
+            <a href="#disclaimer" class="privacy-tab">Medical Disclaimer</a>
+            <a href="#ethics" class="privacy-tab">Ethical Guidelines</a>
+        </div>
+    </div>
+</section>
+
+<!-- Privacy Policy -->
+<section class="section-padding" id="privacy">
+    <div class="container">
+        <div class="policy-section">
+            <h2><i class="fas fa-shield-alt"></i> Privacy Policy</h2>
+            <p class="section-intro">This privacy policy explains how we handle data in the Insighta AI Assistant research tool.</p>
+            
+            <div class="policy-point">
+                <h3>1. Data Collection & Processing</h3>
+                <p>The Insighta AI Assistant is designed with privacy as a core principle. We implement the following practices:</p>
+                <ul>
+                    <li><strong>No Personal Data Storage:</strong> Images uploaded or captured via camera are processed in real-time and are <strong>not stored</strong> on our servers.</li>
+                    <li><strong>Anonymous Processing:</strong> All analysis occurs without linking images to personal identifiers.</li>
+                    <li><strong>Transient Processing:</strong> Images are held in memory only for the duration of analysis (typically less than 2 seconds).</li>
+                    <li><strong>No Tracking:</strong> We do not use cookies or tracking technologies to monitor individual users.</li>
+                </ul>
+            </div>
+            
+            <div class="policy-point">
+                <h3>2. Technical Implementation</h3>
+                <ul>
+                    <li>Image processing occurs entirely in the user's browser session for camera analysis</li>
+                    <li>Uploaded images are transmitted securely (HTTPS) for server-side analysis but are immediately deleted after processing</li>
+                    <li>No personal health information (PHI) is collected or stored</li>
+                    <li>Server logs are anonymized and rotated regularly</li>
+                </ul>
+            </div>
+            
+            <div class="policy-point">
+                <h3>3. Research Data</h3>
+                <p>For research improvement purposes, we may collect <strong>anonymized, aggregated statistics</strong> such as:</p>
+                <ul>
+                    <li>Total number of analyses performed</li>
+                    <li>General performance metrics (accuracy, processing time)</li>
+                    <li>Browser and device types (for compatibility improvement)</li>
+                </ul>
+                <p>No individual images or analysis results are included in research datasets without explicit, informed consent through our formal research collaboration program.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Terms of Use -->
+<section class="section-padding" id="terms">
+    <div class="container">
+        <div class="policy-section">
+            <h2><i class="fas fa-file-contract"></i> Terms of Use</h2>
+            <p class="section-intro">By using the Insighta AI Assistant, you agree to the following terms and conditions.</p>
+            
+            <div class="policy-point">
+                <h3>1. Acceptable Use</h3>
+                <p>You agree to use this tool for:</p>
+                <ul>
+                    <li>Educational and research purposes</li>
+                    <li>Preliminary self-assessment (with understanding of limitations)</li>
+                    <li>Academic research and study</li>
+                    <li>Professional development for healthcare students</li>
+                </ul>
+                
+                <p>You agree <strong>not</strong> to use this tool for:</p>
+                <ul>
+                    <li>Definitive medical diagnosis or treatment decisions</li>
+                    <li>Emergency medical situations</li>
+                    <li>Commercial diagnostic services without formal partnership</li>
+                    <li>Any illegal or unauthorized purpose</li>
+                </ul>
+            </div>
+            
+            <div class="policy-point">
+                <h3>2. User Responsibilities</h3>
+                <ul>
+                    <li>You are responsible for understanding and acknowledging the tool's limitations</li>
+                    <li>You must consult qualified healthcare professionals for medical concerns</li>
+                    <li>You should not disregard professional medical advice based on tool results</li>
+                    <li>You agree to use the tool in compliance with all applicable laws</li>
+                </ul>
+            </div>
+            
+            <div class="policy-point">
+                <h3>3. Intellectual Property</h3>
+                <p>The Insighta AI Assistant software, algorithms, and interface are research property. You may:</p>
+                <ul>
+                    <li>Use the tool for permitted purposes</li>
+                    <li>Reference results in academic work with proper citation</li>
+                </ul>
+                <p>You may not:</p>
+                <ul>
+                    <li>Reverse engineer or attempt to extract proprietary algorithms</li>
+                    <li>Use the tool for commercial purposes without authorization</li>
+                    <li>Claim ownership of the underlying technology</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Medical Disclaimer -->
+<section class="section-padding" id="disclaimer">
+    <div class="container">
+        <div class="policy-section disclaimer-section">
+            <h2><i class="fas fa-exclamation-triangle"></i> Medical Disclaimer</h2>
+            <div class="disclaimer-alert">
+                <h3>Important Notice</h3>
+                <p>The Insighta AI Assistant is a <strong>research tool for preliminary analysis only</strong>. It is not a medical device and should not be used as a substitute for professional medical advice, diagnosis, or treatment.</p>
+            </div>
+            
+            <div class="policy-point">
+                <h3>1. Limitations of AI Analysis</h3>
+                <ul>
+                    <li>AI models have inherent limitations and can make errors</li>
+                    <li>Performance varies across different skin types, conditions, and image quality</li>
+                    <li>The tool does not consider patient history, symptoms, or physical examination</li>
+                    <li>Confidence scores indicate model certainty, not clinical certainty</li>
+                </ul>
+            </div>
+            
+            <div class="policy-point">
+                <h3>2. When to Seek Professional Care</h3>
+                <p>Always consult a qualified dermatologist or healthcare provider if you have concerns about:</p>
+                <ul>
+                    <li>New, changing, or growing skin lesions</li>
+                    <li>Lesions that bleed, itch, or cause discomfort</li>
+                    <li>Family history of skin cancer</li>
+                    <li>Any concerning skin changes</li>
+                </ul>
+                <p><strong>In emergency situations, seek immediate medical attention.</strong></p>
+            </div>
+            
+            <div class="policy-point">
+                <h3>3. No Doctor-Patient Relationship</h3>
+                <p>Use of this tool does not create a doctor-patient relationship. The research team are not providing medical advice through this platform.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Ethical Guidelines -->
+<section class="section-padding" id="ethics">
+    <div class="container">
+        <div class="policy-section">
+            <h2><i class="fas fa-balance-scale"></i> Ethical Guidelines</h2>
+            <p class="section-intro">Our commitment to ethical AI development and responsible research practices.</p>
+            
+            <div class="policy-point">
+                <h3>1. Research Ethics Compliance</h3>
+                <ul>
+                    <li>All research follows institutional review board (IRB) protocols</li>
+                    <li>Data collection for research improvement requires informed consent</li>
+                    <li>We prioritize beneficence and non-maleficence in tool design</li>
+                    <li>Regular ethical reviews of algorithms and applications</li>
+                </ul>
+            </div>
+            
+            <div class="policy-point">
+                <h3>2. Algorithmic Fairness</h3>
+                <p>We actively work to address potential biases in our AI systems:</p>
+                <ul>
+                    <li>Diverse training datasets representing multiple skin types</li>
+                    <li>Regular bias audits and performance evaluations across subgroups</li>
+                    <li>Transparency about known limitations and performance variations</li>
+                    <li>Ongoing efforts to improve equity in diagnostic accuracy</li>
+                </ul>
+            </div>
+            
+            <div class="policy-point">
+                <h3>3. Transparency & Accountability</h3>
+                <ul>
+                    <li>Clear communication about tool capabilities and limitations</li>
+                    <li>Provision of confidence scores to indicate uncertainty</li>
+                    <li>Openness about research methodology and validation results</li>
+                    <li>Responsible disclosure of errors or limitations discovered</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="acknowledgement-box">
+            <h4><i class="fas fa-check-circle"></i> User Acknowledgement</h4>
+            <p>By using the Insighta AI Assistant, you acknowledge that you have read and understand these policies, terms, disclaimers, and ethical guidelines. You understand the tool's limitations and agree to use it responsibly.</p>
+        </div>
+        
+        <div class="contact-support">
+            <p>For questions about these policies or to report concerns:</p>
+            <a href="{% url 'contact' %}" class="btn btn-outline">
+                <i class="fas fa-question-circle"></i> Contact Research Team
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- Policy Updates -->
+<section class="section-plight padding">
+    <div class="container">
+        <div class="updates-notice">
+            <h4><i class="fas fa-sync-alt"></i> Policy Updates</h4>
+            <p>We may update these policies as our research evolves. Significant changes will be noted on this page with updated dates. Continued use of the tool constitutes acceptance of updated policies.</p>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Tab navigation
+        const tabs = document.querySelectorAll('.privacy-tab');
+        const sections = document.querySelectorAll('.policy-section');
+        
+        tabs.forEach(tab => {
+            tab.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Remove active class from all tabs
+                tabs.forEach(t => t.classList.remove('active'));
+                
+                // Add active class to clicked tab
+                this.classList.add('active');
+                
+                // Scroll to section
+                const targetId = this.getAttribute('href');
+                const targetSection = document.querySelector(targetId);
+                
+                if (targetSection) {
+                    window.scrollTo({
+                        top: targetSection.offsetTop - 100,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+        
+        // Update active tab on scroll
+        function updateActiveTab() {
+            let currentSection = '';
+            
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                
+                if (window.scrollY >= sectionTop - 150 && 
+                    window.scrollY < sectionTop + sectionHeight - 150) {
+                    currentSection = '#' + section.id;
+                }
+            });
+            
+            tabs.forEach(tab => {
+                tab.classList.remove('active');
+                if (tab.getAttribute('href') === currentSection) {
+                    tab.classList.add('active');
+                }
+            });
+        }
+        
+        window.addEventListener('scroll', updateActiveTab);
+    });
+</script>
+{% endblock %}

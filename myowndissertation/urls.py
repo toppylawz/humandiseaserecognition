@@ -17,8 +17,16 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
+from classifier import views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("", include("classifier.urls")),
+    path("predict/", include("classifier.urls")),
+
+    path('', views.HomeView.as_view(), name='home'),
+    # path('about/', views.AboutView.as_view(), name='about'),
+    path('analyzer/', views.AnalyzerView.as_view(), name='analyzer'),
+    path("contact/", views.ContactView.as_view(), name="contact"),
+    path("contact-submit/", views.contact_submit, name="contact_submit"),
+    path('privacy/', views.PrivacyView.as_view(), name='privacy'),
 ]

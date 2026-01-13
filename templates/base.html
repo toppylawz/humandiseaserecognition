@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Dermatology AI Assistant{% endblock %}</title>
+    
+    <!-- Global Meta Tags -->
+    <meta name="description" content="{% block meta_description %}An AI-powered research tool for preliminary dermatological analysis.{% endblock %}">
+    <meta name="keywords" content="dermatology, AI, skin analysis, medical research, machine learning">
+    <meta name="author" content="Insighta Research Team">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{% static 'images/favicon.ico' %}">
+    
+    <!-- Global CSS & Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Source+Serif+Pro:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    
+    <!-- Page-specific CSS -->
+    {% block extra_css %}{% endblock %}
+    
+    <!-- Page-specific head content -->
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <!-- Skip to main content -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    
+    <!-- Navigation -->
+    <header class="main-header">
+        <div class="container nav-container">
+            <a href="{% url 'home' %}" class="logo">
+                <i class="fas fa-stethoscope logo-icon"></i>
+                <span>Insighta AI Assistant</span>
+            </a>
+            
+            <!-- Mobile menu toggle -->
+            <button class="mobile-menu-toggle" aria-label="Toggle menu" aria-expanded="false">
+                <i class="fas fa-bars"></i>
+            </button>
+            
+            <!-- Main Navigation -->
+            <nav class="main-nav" id="main-nav">
+                <ul class="nav-links">
+                    <li><a href="{% url 'home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+                        <i class="fas fa-home"></i> Home
+                    </a></li>
+                    {% comment %} <li><a href="{% url 'about' %}" class="{% if request.resolver_match.url_name == 'about' %}active{% endif %}">
+                        <i class="fas fa-microscope"></i> Research
+                    </a></li> {% endcomment %}
+                    <li><a href="{% url 'analyzer' %}" class="{% if request.resolver_match.url_name == 'analyzer' %}active{% endif %}">
+                        <i class="fas fa-play-circle"></i> Analyser
+                    </a></li>
+                    <li><a href="{% url 'contact' %}" class="{% if request.resolver_match.url_name == 'contact' %}active{% endif %}">
+                        <i class="fas fa-handshake"></i> Contact 
+                    </a></li>
+                    <li><a href="{% url 'privacy' %}" class="btn-outline small">
+                        <i class="fas fa-shield-alt"></i> Privacy
+                    </a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main id="main-content">
+        {% block content %}
+        <!-- Page-specific content goes here -->
+        {% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="main-footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <div class="footer-logo">Insighta AI Assistant</div>
+                    <p>A research initiative exploring AI applications in Dermatology.</p>
+                    <div class="footer-social">
+                        <a href="https://github.com/toppylawz/humandiseaserecognition" aria-label="GitHub"><i class="fab fa-github"></i></a>
+                        <a href="https://www.linkedin.com/in/adeolu-olofintuyi-6251bb9b/" aria-label="LinkedIn"><i class="fab fa-linkedin"></i></a>
+                        <a href="#" aria-label="ResearchGate"><i class="fab fa-researchgate"></i></a>
+                    </div>
+                </div>
+                
+                <div class="footer-links">
+                    <h4>Navigation</h4>
+                    <ul>
+                        <li><a href="{% url 'home' %}">Home</a></li>
+                        <li><a href="{% url 'analyzer' %}">Analysis Tool</a></li>
+                        <li><a href="{% url 'contact' %}">Contact </a></li>
+                        <li><a href="{% url 'privacy' %}">Privacy & Terms</a></li>
+                    </ul>
+                </div>
+                
+                {% comment %} <div class="footer-links">
+                    <h4>Research Team</h4>
+                    <ul>
+                        <li><i class="fas fa-user-graduate"></i> Adeolu Olofintuyi</li>
+                        <li><i class="fas fa-envelope"></i> <a href="mailto:adeolu@techwagon.org">adeolu@techwagon.org</a></li>
+                        <li><i class="fas fa-chalkboard-teacher"></i> Dr. Ajmal Gharib</li>
+                        <li><i class="fas fa-envelope"></i> <a href="mailto:A.Gharib@shu.ac.uk">A.Gharib@shu.ac.uk</a></li>
+                    </ul>
+                </div> {% endcomment %}
+                
+                <div class="footer-links">
+                    <h4>Important</h4>
+                    <ul>
+                        <li><a href="{% url 'privacy' %}#disclaimer"><i class="fas fa-exclamation-triangle"></i> Medical Disclaimer</a></li>
+                        <li><a href="{% url 'privacy' %}#ethics"><i class="fas fa-balance-scale"></i> Ethical Guidelines</a></li>
+                        <li><a href="{% url 'contact' %}#collaborate"><i class="fas fa-handshake"></i> Contact</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <div class="copyright">
+                    &copy; 2024 Dermatology AI Assistant Research Project. All rights reserved.
+                    <br><small>This tool is for academic research and educational purposes only. Not a certified medical device.</small>
+                </div>
+                <div class="footer-credits">
+                    <span>Sheffield Hallam University | Techwagon Research Initiative</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Global JavaScript -->
+    <script src="{% static 'classifier/style.js' %}"></script>
+    
+    <!-- Page-specific JavaScript -->
+    {% block extra_js %}{% endblock %}
+    
+    <!-- Analytics/scripts that go at end of body -->
+    {% block body_end %}{% endblock %}
+</body>
+</html>

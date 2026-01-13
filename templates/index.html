@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Dermatology AI Assistant - Home{% endblock %}
+
+{% block meta_description %}An advanced AI research tool for preliminary dermatological analysis. Explore our technology, research goals, and try the analysis tool.{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/home.css' %}">
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero">
+    <div class="container hero-content">
+        <div class="hero-text">
+            <h1>Advancing Dermatological Screening with AI</h1>
+            <p class="hero-subtitle">A cutting-edge research platform for preliminary, non-invasive analysis of skin lesions using state-of-the-art computer vision and deep learning.</p>
+            <div class="hero-buttons">
+                <a href="{% url 'analyzer' %}" class="btn btn-primary btn-large">
+                    <i class="fas fa-play-circle"></i> Try the Analyzer
+                </a>
+                {% comment %} <a href="{% url 'about' %}#research" class="btn btn-outline btn-large">
+                    <i class="fas fa-chart-line"></i> View Research
+                </a> {% endcomment %}
+            </div>
+            <div class="hero-stats">
+                <div class="stat-item">
+                    <span class="stat-number">30+</span>
+                    <span class="stat-label">Skin Conditions</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">99.8%</span>
+                    <span class="stat-label">Model Reliability</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">&lt;2s</span>
+                    <span class="stat-label">Analysis Time</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">24/7</span>
+                    <span class="stat-label">Accessible</span>
+                </div>
+            </div>
+        </div>
+        <div class="hero-visual">
+            <div class="hero-image-placeholder">
+                <i class="fas fa-robot" style="font-size: 4rem; color: var(--primary-color);"></i>
+                <div class="visual-overlay">
+                    <div class="pulse-ring"></div>
+                    <div class="pulse-ring delay-1"></div>
+                    <div class="pulse-ring delay-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+</br>
+
+<!-- How It Works Section -->
+<section class="section-padding how-it-works">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-label">Process</span>
+            <h2>How the AI Analysis Works</h2>
+            <p class="section-subtitle">Our three-step pipeline transforms image input into actionable insights</p>
+        </div>
+        
+        <div class="process-steps">
+            <div class="step">
+                <div class="step-number">01</div>
+                <div class="step-icon">
+                    <i class="fas fa-camera"></i>
+                </div>
+                <h3>Image Capture</h3>
+                <p>Use live camera feed or upload high-quality images of dermatological concerns with proper lighting and focus.</p>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">02</div>
+                <div class="step-icon">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <h3>AI Processing</h3>
+                <p>Our YOLO-based model analyses visual patterns, extracts features, and compares against trained datasets.</p>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">03</div>
+                <div class="step-icon">
+                    <i class="fas fa-chart-pie"></i>
+                </div>
+                <h3>Result Delivery</h3>
+                <p>At the present stage of development, receive ranked differential diagnosis with confidence scores for informed preliminary assessment.</p>
+            </div>
+            
+            <div class="process-connector"></div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+</br>
+<section class="section-padding features">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-label">Features</span>
+            <h2>Designed for Research & Education</h2>
+            <p class="section-subtitle">Built with academic rigour and practical application in mind</p>
+        </div>
+        
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <h3>Ethical Framework</h3>
+                <p>Designed as a preliminary screening aid with clear disclaimers and emphasis on professional diagnosis.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-bolt"></i>
+                </div>
+                <h3>Real-Time Analysis</h3>
+                <p>Live camera processing provides immediate feedback while maintaining patient privacy.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <h3>Collaboration Ready</h3>
+                <p>Built to facilitate research partnerships, clinical validation, and dataset expansion.</p>
+            </div>
+        </div>
+    </div>
+</section>
+</br><!-- Call to Action Section -->
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/home.js' %}"></script>
+{% endblock %}
