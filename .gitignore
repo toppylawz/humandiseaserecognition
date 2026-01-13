@@ -29,6 +29,7 @@ env/
 # Static and media files
 # /static/
 /media/
+/staticfiles/
 
 # Migrations
 */migrations/*

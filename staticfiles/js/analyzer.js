@@ -370,6 +370,11 @@ class DermatologyAIApp {
         this.browseBtn = document.getElementById('browseBtn');
         this.clearPreview = document.getElementById('clearPreview');
         this.uploadArea = document.getElementById('uploadArea');
+
+        const page = document.getElementById("analyzerPage");
+        this.predictUrl = page?.dataset.predictUrl || "/predict/";
+        this.predictFrameUrl = page?.dataset.predictFrameUrl || "/predict/predict-frame/";
+
         
         console.log('App initialized with elements:', {
             video: !!this.video,
@@ -674,7 +679,7 @@ class DermatologyAIApp {
         
         try {
             console.log('Sending request to /predict/');
-            const response = await fetch("/predict/", {
+            const response = await fetch(this.predictUrl, {
                 method: "POST",
                 body: formData
             });
@@ -880,7 +885,7 @@ class DermatologyAIApp {
             formData.append("frame", blob, "frame.jpg");
             
             console.log('Sending frame to /predict-frame/');
-            const response = await fetch("/predict-frame/", {
+            const response = await fetch(this.predictFrameUrl, {
                 method: "POST",
                 body: formData
             });

@@ -487,3 +487,137 @@ main {
         width: auto;
     }
 }
+
+/* ===== MOBILE MENU FIXES ===== */
+
+/* Make sure mobile menu toggle is visible on mobile */
+@media (max-width: 768px) {
+    .mobile-menu-toggle {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: var(--gray-700);
+        cursor: pointer;
+        padding: 0;
+        z-index: 1001;
+        position: relative;
+    }
+    
+    .mobile-menu-toggle:focus {
+        outline: 2px solid var(--primary-color);
+        outline-offset: 2px;
+    }
+    
+    .mobile-menu-toggle i {
+        transition: transform 0.3s ease;
+    }
+    
+    /* Main navigation for mobile */
+    .main-nav {
+        position: fixed;
+        top: 0;
+        right: -100%;
+        width: 280px;
+        height: 100vh;
+        background-color: var(--white);
+        box-shadow: var(--shadow-xl);
+        padding: 5rem 2rem 2rem;
+        transition: right 0.3s ease-in-out;
+        z-index: 1000;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    }
+    
+    .main-nav.active {
+        right: 0;
+    }
+    
+    /* Overlay when menu is open */
+    .main-nav.active::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: -1;
+    }
+    
+    /* Navigation links */
+    .nav-links {
+        flex-direction: column;
+        gap: 0;
+        width: 100%;
+    }
+    
+    .nav-links li {
+        width: 100%;
+        border-bottom: 1px solid var(--gray-200);
+    }
+    
+    .nav-links li:last-child {
+        border-bottom: none;
+    }
+    
+    .nav-links a {
+        padding: 1rem 0;
+        width: 100%;
+        justify-content: flex-start;
+        border-bottom: none !important;
+    }
+    
+    .nav-links a.active::after {
+        display: none;
+    }
+    
+    .nav-links a.active {
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+    
+    /* Prevent body scroll when menu is open */
+    body.menu-open {
+        overflow: hidden;
+        height: 100vh;
+    }
+    
+    /* Ensure header stays on top */
+    .main-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+    }
+}
+
+/* Ensure desktop menu works correctly */
+@media (min-width: 769px) {
+    .mobile-menu-toggle {
+        display: none !important;
+    }
+    
+    .main-nav {
+        display: flex !important;
+        align-items: center;
+    }
+    
+    .nav-links {
+        display: flex !important;
+        gap: 2rem;
+    }
+}
+
+/* Fix for iOS Safari */
+@supports (-webkit-touch-callout: none) {
+    .main-nav {
+        height: -webkit-fill-available;
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+}
