@@ -129,12 +129,70 @@
     </footer>
 
     <!-- Global JavaScript -->
-    <script src="{% static 'classifier/style.js' %}"></script>
+    <script src="{% static 'js/main.js' %}"></script>
     
     <!-- Page-specific JavaScript -->
     {% block extra_js %}{% endblock %}
     
-    <!-- Analytics/scripts that go at end of body -->
-    {% block body_end %}{% endblock %}
+
+    {% block body_end %}
+<!-- Debug script for mobile menu -->
+<script>
+    (function() {
+        console.log('=== MOBILE MENU DEBUG ===');
+        
+        // Check if we're on mobile
+        const isMobile = window.innerWidth <= 768;
+        console.log('Window width:', window.innerWidth, 'Is mobile:', isMobile);
+        
+        // Find elements
+        const toggle = document.querySelector('.mobile-menu-toggle');
+        const nav = document.querySelector('.main-nav');
+        const links = document.querySelectorAll('.nav-links a');
+        
+        console.log('Elements found:', {
+            toggle: toggle ? 'YES' : 'NO',
+            nav: nav ? 'YES' : 'NO',
+            links: links.length
+        });
+        
+        // Check CSS
+        if (toggle) {
+            const toggleStyles = window.getComputedStyle(toggle);
+            console.log('Toggle button styles:', {
+                display: toggleStyles.display,
+                visibility: toggleStyles.visibility,
+                position: toggleStyles.position,
+                zIndex: toggleStyles.zIndex,
+                opacity: toggleStyles.opacity,
+                pointerEvents: toggleStyles.pointerEvents
+            });
+            
+            // Add visual indicator for debugging
+            toggle.style.outline = '2px solid red';
+        }
+        
+        if (nav) {
+            const navStyles = window.getComputedStyle(nav);
+            console.log('Nav styles:', {
+                display: navStyles.display,
+                position: navStyles.position,
+                right: navStyles.right,
+                width: navStyles.width
+            });
+            
+            // Add visual indicator
+            nav.style.outline = '2px solid blue';
+        }
+        
+        // Check for any JavaScript errors
+        window.onerror = function(msg, url, line) {
+            console.error('JavaScript Error:', msg, 'at', line);
+        };
+        
+        console.log('=== END DEBUG ===');
+    })();
+</script>
+{% endblock %}
 </body>
 </html>
