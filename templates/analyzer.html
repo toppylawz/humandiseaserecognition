@@ -42,6 +42,10 @@
                         <i class="fas fa-chart-line"></i>
                         <span>Top-5 Results</span>
                     </div>
+                    <div class="feature-badge">
+                        <i class="fas fa-eye"></i>
+                        <span>Explainable AI</span>
+                    </div>
                 </div>
             </div>
             
@@ -175,6 +179,9 @@
                             <button id="btnLive" disabled class="btn btn-warning">
                                 <i class="fas fa-broadcast-tower"></i> Start Live Analysis
                             </button>
+                            <button id="btnExplainFrame" disabled class="btn btn-outline" title="Analyse the current frame and show which regions drove the prediction">
+                                <i class="fas fa-eye"></i> Explain Frame
+                            </button>
                         </div>
                         
                         <!-- Live Results -->
@@ -224,7 +231,7 @@
             <div class="instruction-step">
                 <div class="step-number">4</div>
                 <h3>Review Results</h3>
-                <p>Examine the top predictions with confidence scores and differential diagnosis.</p>
+                <p>Examine the top predictions with confidence scores, then use the Grad-CAM heatmap and faithfulness check to see which skin regions drove the result.</p>
             </div>
         </div>
     </div>

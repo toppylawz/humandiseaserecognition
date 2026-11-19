@@ -370,6 +370,7 @@ class DermatologyAIApp {
         this.browseBtn = document.getElementById('browseBtn');
         this.clearPreview = document.getElementById('clearPreview');
         this.uploadArea = document.getElementById('uploadArea');
+        this.btnExplainFrame = document.getElementById('btnExplainFrame');
 
         const page = document.getElementById("analyzerPage");
         this.predictUrl = page?.dataset.predictUrl || "/predict/";
@@ -461,6 +462,13 @@ class DermatologyAIApp {
             this.btnLive.addEventListener('click', () => {
                 console.log('Live analysis clicked');
                 this.toggleLiveAnalysis();
+            });
+        }
+        
+        if (this.btnExplainFrame) {
+            this.btnExplainFrame.addEventListener('click', () => {
+                console.log('Explain frame clicked');
+                this.explainFrame();
             });
         }
         
@@ -573,6 +581,7 @@ class DermatologyAIApp {
             this.btnStop.disabled = false;
             this.btnLive.disabled = false;
             this.btnSwitchCamera.disabled = false;
+            if (this.btnExplainFrame) this.btnExplainFrame.disabled = false;
             this.setButtonLoading(this.btnStart, false, '<i class="fas fa-play"></i> Start Camera');
             
             // Update camera label
@@ -616,6 +625,7 @@ class DermatologyAIApp {
         this.btnStop.disabled = true;
         this.btnLive.disabled = true;
         this.btnSwitchCamera.disabled = true;
+        if (this.btnExplainFrame) this.btnExplainFrame.disabled = true;
         this.btnLive.innerHTML = '<i class="fas fa-broadcast-tower"></i> Start Live Analysis';
         
         // Hide recording indicator
@@ -676,6 +686,7 @@ class DermatologyAIApp {
         
         const formData = new FormData();
         formData.append("image", this.currentFile);
+        formData.append("explain", "1");
         
         try {
             console.log('Sending request to /predict/');
@@ -825,9 +836,185 @@ class DermatologyAIApp {
             `;
         }
         
+        if (data.xai) {
+            html += this.renderXaiPanel(data.xai);
+        } else if (data.xai_error) {
+            html += `<p class="xai-unavailable"><i class="fas fa-info-circle"></i> Explanation unavailable for this image.</p>`;
+        }
+        
         container.innerHTML = html;
         container.classList.add('active');
+        if (data.xai) {
+            this.bindXaiPanel(container, data.xai);
+        }
         this.animateConfidenceBars();
+    }
+    
+    // ---------------------------------------------------------------
+    // Explainable AI panel (Grad-CAM and occlusion)
+    // ---------------------------------------------------------------
+    renderXaiPanel(xai) {
+        const pct = (v) => (v * 100).toFixed(1);
+        const imgs = xai.images || {};
+        let faithHtml = '';
+        let agreeHtml = '';
+        
+        if (xai.method_agreement) {
+            const a = xai.method_agreement;
+            agreeHtml = `<br><i class="fas fa-code-branch"></i> Grad-CAM and Occlusion agreement: <strong>${a.level}</strong> (Spearman &rho; = ${a.spearman_rho.toFixed(2)}).`;
+        }
+        
+        if (xai.faithfulness) {
+            const f = xai.faithfulness;
+            const hiddenPct = Math.round((f.fraction_hidden || 0.2) * 100);
+            const verdictText = {
+                strong: 'Strong evidence: hiding the highlighted region removes most of the model\'s confidence, far more than hiding a random region of the same size. The model is relying on the highlighted area.',
+                moderate: 'Moderate evidence: the highlighted region matters more than a random region, but the model also uses other parts of the image.',
+                weak: 'Weak evidence: hiding the highlighted region changes the result little. The model may be using wider context, so interpret this heatmap with caution.'
+            }[f.verdict] || '';
+            
+            faithHtml = `
+                <div class="xai-faith xai-verdict-${f.verdict}">
+                    <h5><i class="fas fa-vial"></i> Faithfulness check
+                        <span class="xai-verdict-tag">${f.verdict}</span>
+                    </h5>
+                    <div class="xai-faith-grid">
+                        <div><span class="xai-num">${pct(f.confidence_original)}%</span><span class="xai-cap">Original confidence</span></div>
+                        <div><span class="xai-num">${pct(f.confidence_highlight_hidden)}%</span><span class="xai-cap">Top ${hiddenPct}% highlighted area hidden</span></div>
+                        <div><span class="xai-num">${pct(f.confidence_random_hidden)}%</span><span class="xai-cap">Random ${hiddenPct}% area hidden</span></div>
+                        <div><span class="xai-num">${pct(f.confidence_only_highlight)}%</span><span class="xai-cap">Only highlighted area shown</span></div>
+                    </div>
+                    <p class="xai-verdict-text">${verdictText}</p>
+                </div>
+            `;
+        }
+        
+        return `
+            <div class="xai-panel">
+                <div class="xai-header">
+                    <h4><i class="fas fa-eye"></i> Why this result? <span class="xai-sub-title">Explainable AI</span></h4>
+                    <div class="xai-toggle" role="group" aria-label="Explanation method">
+                        <button type="button" class="xai-method active" data-method="gradcam">Grad-CAM</button>
+                        ${imgs.occlusion_heatmap ? '<button type="button" class="xai-method" data-method="occlusion">Occlusion</button>' : ''}
+                    </div>
+                </div>
+                <p class="xai-intro">
+                    The heatmap shows which parts of the image pushed the model towards
+                    <strong>${xai.explained_class}</strong>. Red and yellow areas had the strongest influence; blue areas had little.
+                </p>
+                <div class="xai-images">
+                    <figure>
+                        <img src="${imgs.input}" alt="Image region analysed by the model">
+                        <figcaption>What the model saw (${xai.input_size}&times;${xai.input_size} centre crop)</figcaption>
+                    </figure>
+                    <figure>
+                        <div class="xai-stack">
+                            <img src="${imgs.input}" alt="">
+                            <img class="xai-heat" src="${imgs.gradcam_heatmap}" alt="Attention heatmap" style="opacity:0.5">
+                        </div>
+                        <figcaption>Attention heatmap</figcaption>
+                    </figure>
+                </div>
+                <div class="xai-controls">
+                    <label>Heatmap opacity
+                        <input type="range" class="xai-opacity" min="0" max="100" value="50">
+                    </label>
+                    <a class="xai-download" download="explanation.jpg" href="${imgs.gradcam_overlay}">
+                        <i class="fas fa-download"></i> Save overlay
+                    </a>
+                </div>
+                <p class="xai-method-help">
+                    <strong>Grad-CAM</strong> reads the model's internal gradients; <strong>Occlusion</strong> blurs one patch at a time
+                    and measures how much the confidence falls. They work independently, so agreement between them adds trust.
+                </p>
+                <p class="xai-concentration">
+                    <i class="fas fa-bullseye"></i>
+                    ${pct(xai.concentration_top20 || 0)}% of the model's attention is concentrated in the top 20% of the image.
+                    ${agreeHtml}
+                </p>
+                ${faithHtml}
+                <p class="xai-note">
+                    <i class="fas fa-info-circle"></i>
+                    Heatmaps explain how the AI model reached its output; they are not a clinical marking of the lesion.
+                    Method: ${xai.method}, ${xai.target_layer}.
+                </p>
+            </div>
+        `;
+    }
+    
+    bindXaiPanel(container, xai) {
+        const panel = container.querySelector('.xai-panel');
+        if (!panel) return;
+        const heat = panel.querySelector('.xai-heat');
+        const slider = panel.querySelector('.xai-opacity');
+        const download = panel.querySelector('.xai-download');
+        const imgs = xai.images || {};
+        
+        if (slider && heat) {
+            slider.addEventListener('input', () => {
+                heat.style.opacity = (slider.value / 100).toString();
+            });
+        }
+        
+        panel.querySelectorAll('.xai-method').forEach(btn => {
+            btn.addEventListener('click', () => {
+                panel.querySelectorAll('.xai-method').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const method = btn.dataset.method;
+                if (heat && imgs[`${method}_heatmap`]) heat.src = imgs[`${method}_heatmap`];
+                if (download && imgs[`${method}_overlay`]) download.href = imgs[`${method}_overlay`];
+            });
+        });
+    }
+    
+    async explainFrame() {
+        if (!this.cameraManager.isActive()) {
+            ToastSystem.show('Please start camera first', 'warning', 3000);
+            return;
+        }
+        
+        // Pause live analysis so the explanation is not overwritten by the next frame
+        if (this.isLivePredicting) {
+            this.toggleLiveAnalysis();
+        }
+        
+        const w = this.video.videoWidth;
+        const h = this.video.videoHeight;
+        if (!w || !h) return;
+        
+        this.canvas.width = w;
+        this.canvas.height = h;
+        this.canvas.getContext('2d').drawImage(this.video, 0, 0, w, h);
+        
+        this.setButtonLoading(this.btnExplainFrame, true, '<i class="fas fa-spinner fa-spin"></i> Explaining...');
+        
+        try {
+            const blob = await new Promise(resolve => this.canvas.toBlob(resolve, 'image/jpeg', 0.9));
+            const formData = new FormData();
+            formData.append("frame", blob, "frame.jpg");
+            formData.append("explain", "1");
+            
+            const response = await fetch(this.predictFrameUrl, { method: "POST", body: formData });
+            if (!response.ok) {
+                throw new Error('Explanation failed with status ' + response.status);
+            }
+            const data = await response.json();
+            
+            if (data.rejected) {
+                this.showRejectedResult(data, this.camResult);
+            } else if (data.error) {
+                this.showErrorResult(data.error, this.camResult);
+            } else {
+                this.showAnalysisResult(data, this.camResult);
+                ToastSystem.show('Explanation ready', 'success', 2000);
+            }
+            this.camResult.classList.add('active');
+        } catch (error) {
+            console.error('Explain frame error:', error);
+            this.showErrorResult(error.message, this.camResult);
+        } finally {
+            this.setButtonLoading(this.btnExplainFrame, false, '<i class="fas fa-eye"></i> Explain Frame');
+        }
     }
     
     toggleLiveAnalysis() {

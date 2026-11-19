@@ -11,6 +11,16 @@ from django.views.decorators.http import require_POST
 from .forms import ContactForm
 
 from .ml_model import predict_pil_image
+from .xai_service import attach_explanation
+
+
+def _wants_explanation(request, default: bool) -> bool:
+    """explain=1/0 in the form data or query string; falls back to `default`."""
+    v = request.POST.get("explain", request.GET.get("explain"))
+    if v is None:
+        return default
+    return str(v).strip().lower() in ("1", "true", "yes", "on")
+
 
 def index(request):
     return render(request, "classifier/index.html")
@@ -31,6 +41,9 @@ def predict(request):
         return JsonResponse({"error": f"Invalid image: {e}"}, status=400)
 
     pred = predict_pil_image(img, topk=5)
+    # Explanation (Grad-CAM, occlusion, faithfulness check); on by default for uploads
+    if _wants_explanation(request, default=True):
+        pred = attach_explanation(pred, img)
     return JsonResponse(pred, status=200 if "error" not in pred else 500)
 
 
@@ -54,6 +67,9 @@ def predict_frame(request):
         return JsonResponse({"error": f"Invalid frame: {e}"}, status=400)
 
     pred = predict_pil_image(img, topk=5)
+    # Live frames stay fast; explanations only when requested ("Explain Frame" button)
+    if _wants_explanation(request, default=False):
+        pred = attach_explanation(pred, img)
     return JsonResponse(pred, status=200 if "error" not in pred else 500)
 
 
