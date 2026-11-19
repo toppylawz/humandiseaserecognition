@@ -25,6 +25,10 @@ if not ALLOWED_HOSTS:
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
 
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"},
+}
 MEDIA_ROOT = BASE_DIR / "media"
 MEDIA_URL = "/media/"
 

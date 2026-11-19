@@ -80,6 +80,18 @@
 </div>
 <div class="controls hidden" id="heatControls">{% include "partials/heat_toggle.html" %}</div>
 <div class="hidden" id="heatLegend">{% include "partials/legend.html" %}</div>
+<div class="trust-line hidden" id="trustLine">
+<p><span class="trust-mark" id="trustMark" aria-hidden="true"></span><span><strong id="trustTitle"></strong> <span id="trustText"></span></span></p>
+<details class="trust-more">
+<summary>Show how we checked</summary>
+<p class="small muted" style="margin: 12px 0 4px">We covered part of your photo and asked the model again. How sure it is that this is <span id="coverLabel"></span>:</p>
+<ul class="diff trust">
+<li><span>Your photo as it is</span><span id="c0"></span><i><b id="b0"></b></i></li>
+<li><span>Highlighted area covered</span><span id="c1"></span><i><b id="b1"></b></i></li>
+<li><span>Other areas covered instead</span><span id="c2"></span><i><b id="b2"></b></i></li>
+</ul>
+</details>
+</div>
 </figure>
 
 <div id="resultSummary" class="hidden">
@@ -91,20 +103,6 @@
 </div>
 
 <div id="resultNotice" class="notice hidden"><h3 id="noticeTitle"></h3><p id="noticeText"></p></div>
-</div>
-
-<div id="coverTest" class="hidden" style="margin-top: 56px; padding-top: 40px; border-top: 1px solid #191919; max-width: 560px">
-<div id="coverBox">
-<h3 style="margin: 0 0 6px">Can you trust the heatmap?</h3>
-<p class="trust-verdict" id="coverTitle"></p>
-<p class="small" id="coverText" style="margin: 0 0 22px"></p>
-<p class="small muted" style="margin: 0 0 4px">How sure the model is that this is <span id="coverLabel"></span>:</p>
-<ul class="diff trust">
-<li><span>Your photo as it is</span><span id="c0"></span><i><b id="b0"></b></i></li>
-<li><span>Highlighted areas covered</span><span id="c1"></span><i><b id="b1"></b></i></li>
-<li><span>Other areas covered instead</span><span id="c2"></span><i><b id="b2"></b></i></li>
-</ul>
-</div>
 </div>
 
 <p class="urgent" style="font-size: 16px">This is not a diagnosis. If a mark is new, changing, bleeding or painful, see a GP or pharmacist. Call 999 for a rash that spreads fast with a fever.</p>

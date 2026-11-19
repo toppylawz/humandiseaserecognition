@@ -24,7 +24,7 @@
 <div class="legend" aria-hidden="true" style="color: #E9E9E5"><span>Little influence</span><i></i><span>Most influence</span></div>
 <figcaption style="margin-top: 18px; max-width: 36em">
 <p class="answer"><strong>The model's answer: contact dermatitis, 28% sure.</strong></p>
-<p class="small" style="margin: 8px 0 0; color: #E9E9E5">Can you trust the heatmap? Yes. Covering the bright areas drops the model's confidence to under 1%. Covering other areas instead leaves it at 46%.</p>
+<div class="trust-line" style="margin-top: 12px"><p><span class="trust-mark strong" aria-hidden="true">&#10004;</span><span><strong>The model really used the highlighted area.</strong> Covering it made the model much less sure.</span></p></div>
 </figcaption>
 </figure>
 </div>
@@ -35,7 +35,7 @@
 <div><h3>Ruler</h3><p>Each large division is one cell of the 7 &#215; 7 grid the model looks through.</p></div>
 <div><h3>Heatmap</h3><p>Brighter means more influence on the answer. Dark means little or none.</p></div>
 <div><h3>Pins</h3><p>The strongest areas of influence.</p></div>
-<div><h3>Trust check</h3><p>We cover the highlighted areas. If the model really used them, it becomes much less sure.</p></div>
+<div><h3>Trust check</h3><p>We cover the highlighted area and ask again. If the model becomes much less sure, it really used that area.</p></div>
 </div>
 </div>
 

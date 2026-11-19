@@ -165,7 +165,7 @@ function pct(value) {
   document.querySelectorAll('[data-source]').forEach((b) => b.addEventListener('click', () => selectSource(b.dataset.source)));
 
   function resetResult() {
-    ['resultPlate', 'heatControls', 'heatLegend', 'resultSummary', 'resultNotice', 'coverTest'].forEach((id) => $(id).classList.add('hidden'));
+    ['resultPlate', 'heatControls', 'heatLegend', 'resultSummary', 'resultNotice', 'trustLine'].forEach((id) => $(id).classList.add('hidden'));
     $('emptyPlate').classList.remove('hidden');
     $('resultPlate').querySelectorAll('.pin').forEach((p) => p.remove());
     $('resultPlate').classList.remove('heat-off');
@@ -230,21 +230,27 @@ function pct(value) {
     $('heatLegend').classList.remove('hidden');
 
     const f = xai.faithfulness;
-    if (f) {
+    const healthy = top.label === 'Heathy' || top.label === 'Healthy';
+    if (f && !healthy) {
       const copy = {
-        strong: ['Yes', 'Covering the highlighted areas made the model much less sure. Covering other areas did not. So the highlighted areas really are what it used.'],
-        moderate: ['Partly', 'Covering the highlighted areas made the model less sure, but covering other areas had a similar effect.'],
-        weak: ['Not for this photo', 'Covering the highlighted areas changed the answer no more than covering other areas. The model may be using something else, such as the background.']
-      }[f.verdict] || ['', ''];
-      $('coverTitle').textContent = copy[0];
-      $('coverText').textContent = copy[1];
-      $('coverLabel').textContent = displayName(top.label).toLowerCase();
-      [f.confidence_original, f.confidence_highlight_hidden, f.confidence_random_hidden].forEach((v, i) => {
-        $('c' + i).textContent = pct(v);
-        $('b' + i).style.width = Math.max(0, Math.min(100, v * 100)).toFixed(1) + '%';
-      });
-      $('coverBox').classList.toggle('verdict-weak', f.verdict === 'weak');
-      $('coverTest').classList.remove('hidden');
+        strong: ['\u2714', 'The model really used the highlighted area.', 'Covering it made the model much less sure.'],
+        moderate: ['~', 'The highlighted area mattered, but so did the rest of the photo.', ''],
+        weak: ['!', 'The model may have used something other than the highlighted area,', 'such as the background. Treat this result with extra caution.']
+      }[f.verdict];
+      if (copy) {
+        const mark = $('trustMark');
+        mark.textContent = copy[0];
+        mark.className = 'trust-mark ' + f.verdict;
+        $('trustTitle').textContent = copy[1];
+        $('trustText').textContent = copy[2];
+        $('coverLabel').textContent = displayName(top.label).toLowerCase();
+        [f.confidence_original, f.confidence_highlight_hidden, f.confidence_random_hidden].forEach((v, i) => {
+          $('c' + i).textContent = pct(v);
+          $('b' + i).style.width = Math.max(0, Math.min(100, v * 100)).toFixed(1) + '%';
+        });
+        $('trustLine').querySelector('details').open = false;
+        $('trustLine').classList.remove('hidden');
+      }
     }
   }
 
