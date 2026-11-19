@@ -8,8 +8,6 @@ a:hover{color:var(--blue-d)}
 :focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 img{display:block;max-width:100%;height:auto}
 .wrap{max-width:1280px;margin:0 auto;padding:0 56px}
-.checker{display:grid;grid-template-columns:repeat(24,1fr);height:8px}
-.checker span{display:block}
 .top{border-bottom:1px solid var(--ink)}
 .top .wrap{display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:76px}
 .brand{display:flex;align-items:center;gap:14px;color:var(--ink)!important;text-decoration:none}

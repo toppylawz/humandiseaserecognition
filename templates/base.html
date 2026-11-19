@@ -16,7 +16,6 @@
 <body>
 {% with page=request.resolver_match.url_name %}
 <a class="skip" href="#main">Skip to content</a>
-{% include "partials/checker.html" %}
 <header class="top">
 <div class="wrap">
 <a class="brand" href="{% url 'home' %}">{% include "partials/mark.html" %}<b>Dermopsis</b><i>An atlas of what the model sees</i></a>
