@@ -19,9 +19,8 @@ Faithfulness check (in the spirit of Petsiuk et al., 2018, RISE):
     equally sized random region. A map that really reflects what the model
     uses should cause a much larger drop than random.
 
-Preprocessing reproduces the Ultralytics classification predictor exactly
-(resize shorter side -> centre crop -> [0, 1] tensor), so the explanation is
-computed on the same pixels the model classifies.
+Preprocessing uses the Ultralytics classification transform itself, so the
+explanation is computed on exactly the pixels the model classifies.
 """
 
 from __future__ import annotations
@@ -35,6 +34,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from PIL import Image, ImageFilter
+from ultralytics.data.augment import classify_transforms
 
 try:  # matplotlib ships with ultralytics; fall back to a built-in ramp if absent
     from matplotlib import colormaps as _mpl_colormaps
@@ -126,6 +126,7 @@ class YoloClsExplainer:
 
         self.target_layer_name = target_layer
         self._lock = threading.Lock()
+        self._transform = classify_transforms(self.imgsz)
 
     # ----------------------------------------------------------------- utils
     def _target_module(self, which: Optional[str] = None):
@@ -137,18 +138,15 @@ class YoloClsExplainer:
         return getattr(head, "conv", head)
 
     def preprocess(self, pil_img: Image.Image):
-        """Return (tensor[1,3,S,S] in [0,1], RGB uint8 array of the exact crop the model sees)."""
+        """Return (tensor[1,3,S,S] in [0,1], RGB uint8 array of the exact crop the model sees).
+
+        Uses the Ultralytics classification transform itself, so explanations and
+        confidences match model.predict() exactly.
+        """
         if pil_img.mode != "RGB":
             pil_img = pil_img.convert("RGB")
-        s = self.imgsz
-        w, h = pil_img.size
-        scale = s / min(w, h)
-        nw, nh = max(s, round(w * scale)), max(s, round(h * scale))
-        img = pil_img.resize((nw, nh), Image.BILINEAR)
-        left, top = (nw - s) // 2, (nh - s) // 2
-        img = img.crop((left, top, left + s, top + s))
-        arr = np.asarray(img, dtype=np.uint8).copy()
-        x = torch.from_numpy(arr).permute(2, 0, 1).float().div(255.0).unsqueeze(0)
+        x = self._transform(pil_img).unsqueeze(0)
+        arr = (x[0].permute(1, 2, 0).numpy() * 255.0).round().clip(0, 255).astype(np.uint8)
         return x.to(self.device, self.dtype), arr
 
     @torch.no_grad()

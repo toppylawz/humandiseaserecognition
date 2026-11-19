@@ -500,16 +500,6 @@
     color: var(--gray-800);
 }
 
-.xai-sub-title {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--secondary-color);
-    background: rgba(139, 92, 246, 0.1);
-    padding: 0.15rem 0.5rem;
-    border-radius: 999px;
-    margin-left: 0.35rem;
-    vertical-align: middle;
-}
 
 .xai-toggle {
     display: inline-flex;
@@ -534,8 +524,7 @@
 }
 
 .xai-intro,
-.xai-method-help,
-.xai-concentration {
+.xai-agreement {
     color: var(--gray-600);
     font-size: 0.92rem;
     margin: 0.5rem 0 1rem;
@@ -681,10 +670,6 @@
     font-style: italic;
 }
 
-.xai-method-help {
-    font-size: 0.82rem;
-    margin-top: 0.75rem;
-}
 
 @media (max-width: 576px) {
     .xai-faith-grid {

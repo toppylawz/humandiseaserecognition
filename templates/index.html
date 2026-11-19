@@ -14,7 +14,7 @@
     <div class="container hero-content">
         <div class="hero-text">
             <h1>Advancing Dermatological Screening with AI</h1>
-            <p class="hero-subtitle">A cutting-edge research platform for preliminary, non-invasive analysis of skin lesions using state-of-the-art computer vision and deep learning.</p>
+            <p class="hero-subtitle">A research platform for preliminary, non-invasive analysis of skin conditions using computer vision and deep learning, with a visual explanation for every result.</p>
             <div class="hero-buttons">
                 <a href="{% url 'analyzer' %}" class="btn btn-primary btn-large">
                     <i class="fas fa-play-circle"></i> Try the Analyzer
@@ -25,15 +25,15 @@
             </div>
             <div class="hero-stats">
                 <div class="stat-item">
-                    <span class="stat-number">30+</span>
+                    <span class="stat-number">34</span>
                     <span class="stat-label">Skin Conditions</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-number">98.62%</span>
-                    <span class="stat-label">Model Reliability</span>
+                    <span class="stat-number">XAI</span>
+                    <span class="stat-label">Explained Results</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-number">&lt;2s</span>
+                    <span class="stat-number">&lt;5s</span>
                     <span class="stat-label">Analysis Time</span>
                 </div>
                 <div class="stat-item">
@@ -81,7 +81,7 @@
                     <i class="fas fa-brain"></i>
                 </div>
                 <h3>AI Processing</h3>
-                <p>Our YOLO-based model analyses visual patterns, extracts features, and compares against trained datasets.</p>
+                <p>A gate model first checks that the photo shows human skin. A YOLO11 classifier then ranks 34 skin conditions and healthy skin.</p>
             </div>
             
             <div class="step">
@@ -90,7 +90,7 @@
                     <i class="fas fa-chart-pie"></i>
                 </div>
                 <h3>Result Delivery</h3>
-                <p>At the present stage of development, receive ranked differential diagnosis with confidence scores for informed preliminary assessment.</p>
+                <p>Receive the five most likely conditions with confidence scores, plus a heatmap showing which areas of the image drove the result.</p>
             </div>
             
             <div class="process-connector"></div>
@@ -122,7 +122,7 @@
                     <i class="fas fa-bolt"></i>
                 </div>
                 <h3>Real-Time Analysis</h3>
-                <p>Live camera processing provides immediate feedback while maintaining patient privacy.</p>
+                <p>Upload a photo or use the live camera for immediate feedback. Images are analysed in memory and never stored.</p>
             </div>
             
             <div class="feature-card">

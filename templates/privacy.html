@@ -49,29 +49,25 @@
                 <ul>
                     <li><strong>No Personal Data Storage:</strong> Images uploaded or captured via camera are processed in real-time and are <strong>not stored</strong> on our servers.</li>
                     <li><strong>Anonymous Processing:</strong> All analysis occurs without linking images to personal identifiers.</li>
-                    <li><strong>Transient Processing:</strong> Images are held in memory only for the duration of analysis (typically less than 2 seconds).</li>
-                    <li><strong>No Tracking:</strong> We do not use cookies or tracking technologies to monitor individual users.</li>
+                    <li><strong>Transient Processing:</strong> Images are held in memory only for the duration of analysis (typically a few seconds).</li>
+                    <li><strong>No Tracking:</strong> We do not use analytics or tracking cookies. The contact form uses one strictly necessary security cookie (CSRF protection).</li>
                 </ul>
             </div>
             
             <div class="policy-point">
                 <h3>2. Technical Implementation</h3>
                 <ul>
-                    <li>Image processing occurs entirely in the user's browser session for camera analysis</li>
-                    <li>Uploaded images are transmitted securely (HTTPS) for server-side analysis but are immediately deleted after processing</li>
+                    <li>Uploaded images and live camera frames are sent securely (HTTPS) to our server, analysed in memory and never written to disk</li>
+                    <li>Explanation heatmaps are generated during the same request and are not stored</li>
                     <li>No personal health information (PHI) is collected or stored</li>
-                    <li>Server logs are anonymized and rotated regularly</li>
+                    <li>Messages sent through the contact form (name, email, organisation and message) are stored so that we can reply</li>
+                    <li>Standard web server logs, which include IP addresses, are used only for security and troubleshooting and are rotated automatically</li>
                 </ul>
             </div>
             
             <div class="policy-point">
                 <h3>3. Research Data</h3>
-                <p>For research improvement purposes, we may collect <strong>anonymized, aggregated statistics</strong> such as:</p>
-                <ul>
-                    <li>Total number of analyses performed</li>
-                    <li>General performance metrics (accuracy, processing time)</li>
-                    <li>Browser and device types (for compatibility improvement)</li>
-                </ul>
+                <p>We do not currently collect usage statistics. If we introduce them, they will be <strong>anonymised and aggregated</strong> (for example, the number of analyses performed) and this policy will be updated first.</p>
                 <p>No individual images or analysis results are included in research datasets without explicit, informed consent through our formal research collaboration program.</p>
             </div>
         </div>
@@ -149,6 +145,9 @@
                     <li>Performance varies across different skin types, conditions, and image quality</li>
                     <li>The tool does not consider patient history, symptoms, or physical examination</li>
                     <li>Confidence scores indicate model certainty, not clinical certainty</li>
+                    <li>On the original test set the top suggestion is correct for about 9 in 10 images, but most of those test images have near-identical copies in the training data. On photos the model has never seen, the top suggestion is correct for roughly 6 in 10, and the correct condition is in the top five for about 9 in 10. A retrained model with a leakage-free evaluation is in progress</li>
+                    <li>Some categories were built from only a small number of original photos, so results for them are less reliable</li>
+                    <li>Heatmaps show which areas of the image influenced the AI; the two explanation methods can disagree, and heatmaps are not clinical markings</li>
                 </ul>
             </div>
             

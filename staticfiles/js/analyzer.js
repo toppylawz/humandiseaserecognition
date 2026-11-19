@@ -55,6 +55,49 @@ class ToastSystem {
     }
 }
 
+// Readable names for the model's class labels
+const CLASS_DISPLAY_NAMES = {
+    'Acne And Rosacea Photos': 'Acne and rosacea',
+    'Actinic Keratosis Basal Cell Carcinoma And Other Malignant Lesions': 'Actinic keratosis, basal cell carcinoma and other malignant lesions',
+    'Atopic Dermatitis Photos': 'Atopic dermatitis',
+    'Ba  Cellulitis': 'Cellulitis (bacterial)',
+    'Ba Impetigo': 'Impetigo (bacterial)',
+    'Benign': 'Benign lesion',
+    'Bullous Disease Photos': 'Bullous disease',
+    'Cellulitis Impetigo And Other Bacterial Infections': 'Cellulitis, impetigo and other bacterial infections',
+    'Eczema Photos': 'Eczema',
+    'Exanthems And Drug Eruptions': 'Exanthems and drug eruptions',
+    'Fu Athlete Foot': "Athlete's foot (fungal)",
+    'Fu Nail Fungus': 'Nail fungus',
+    'Fu Ringworm': 'Ringworm (fungal)',
+    'Hair Loss Photos Alopecia And Other Hair Diseases': 'Hair loss, alopecia and other hair diseases',
+    'Heathy': 'Healthy skin',
+    'Herpes Hpv And Other Stds Photos': 'Herpes, HPV and other STIs',
+    'Light Diseases And Disorders Of Pigmentation': 'Light-related and pigmentation disorders',
+    'Lupus And Other Connective Tissue Diseases': 'Lupus and other connective tissue diseases',
+    'Malignant': 'Malignant lesion',
+    'Melanoma Skin Cancer Nevi And Moles': 'Melanoma, skin cancer, naevi and moles',
+    'Nail Fungus And Other Nail Disease': 'Nail fungus and other nail diseases',
+    'Pa Cutaneous Larva Migrans': 'Cutaneous larva migrans (parasitic)',
+    'Poison Ivy Photos And Other Contact Dermatitis': 'Poison ivy and other contact dermatitis',
+    'Psoriasis Pictures Lichen Planus And Related Diseases': 'Psoriasis, lichen planus and related diseases',
+    'Rashes': 'Rashes',
+    'Scabies Lyme Disease And Other Infestations And Bites': 'Scabies, Lyme disease and other infestations and bites',
+    'Seborrheic Keratoses And Other Benign Tumors': 'Seborrhoeic keratoses and other benign tumours',
+    'Systemic Disease': 'Systemic disease',
+    'Tinea Ringworm Candidiasis And Other Fungal Infections': 'Tinea, ringworm, candidiasis and other fungal infections',
+    'Urticaria Hives': 'Urticaria (hives)',
+    'Vascular Tumors': 'Vascular tumours',
+    'Vasculitis Photos': 'Vasculitis',
+    'Vi Chickenpox': 'Chickenpox (viral)',
+    'Vi Shingles': 'Shingles (viral)',
+    'Warts Molluscum And Other Viral Infections': 'Warts, molluscum and other viral infections'
+};
+
+function displayName(label) {
+    return CLASS_DISPLAY_NAMES[label] || label;
+}
+
 // Camera Manager with Front Camera Default and Better Mobile Support
 class CameraManager {
     constructor(videoElement) {
@@ -682,7 +725,7 @@ class DermatologyAIApp {
         }
         
         // Show loading state
-        this.setButtonLoading(this.btnPredictUpload, true, '<i class="fas fa-spinner fa-spin"></i> Analyzing...');
+        this.setButtonLoading(this.btnPredictUpload, true, '<i class="fas fa-spinner fa-spin"></i> Analysing...');
         
         const formData = new FormData();
         formData.append("image", this.currentFile);
@@ -723,7 +766,7 @@ class DermatologyAIApp {
             this.showErrorResult(error.message, this.uploadResult);
             ToastSystem.show('Error: ' + error.message, 'error', 4000);
         } finally {
-            this.setButtonLoading(this.btnPredictUpload, false, '<i class="fas fa-search"></i> Analyze Image');
+            this.setButtonLoading(this.btnPredictUpload, false, '<i class="fas fa-search"></i> Analyse Image');
         }
     }
     
@@ -782,7 +825,7 @@ class DermatologyAIApp {
                 </h4>
                 <div style="background: #e8f5e9; padding: 20px; border-radius: 10px; border-left: 4px solid #4caf50;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <span style="font-size: 1.1rem; font-weight: 600; color: #2e7d32;">${top1.label}</span>
+                        <span style="font-size: 1.1rem; font-weight: 600; color: #2e7d32;">${displayName(top1.label)}</span>
                         <span style="font-size: 1.3rem; font-weight: 700; color: #1b5e20;">${confPct}%</span>
                     </div>
                     <div class="confidence-meter">
@@ -799,10 +842,10 @@ class DermatologyAIApp {
             html += `
                 <div>
                     <h4 style="color: #2c3e50; margin-bottom: 15px;">
-                        <i class="fas fa-list-ol"></i> Differential Diagnosis (Top ${topPredictions.length})
+                        <i class="fas fa-list-ol"></i> Most Likely Conditions (Top ${topPredictions.length})
                     </h4>
                     <div style="background: #f5f5f5; padding: 20px; border-radius: 10px;">
-                        <ol style="margin: 0; padding-left: 20px;">
+                        <ol style="margin: 0; padding-left: 0; list-style: none;">
             `;
             
             topPredictions.forEach((x, index) => {
@@ -810,14 +853,14 @@ class DermatologyAIApp {
                 const barWidth = Math.min(percentage, 100);
                 html += `
                     <li style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: ${index === topPredictions.length - 1 ? 'none' : '1px solid #e0e0e0'};">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 5px;">
                             <span style="font-weight: 600; color: #37474f;">
                                 <span style="display: inline-block; width: 24px; height: 24px; background: #3498db; color: white; border-radius: 50%; text-align: center; line-height: 24px; margin-right: 10px; font-size: 0.9rem;">
                                     ${index + 1}
                                 </span>
-                                ${x.label}
+                                ${displayName(x.label)}
                             </span>
-                            <span style="font-weight: 700; color: #455a64;">${percentage}%</span>
+                            <span style="font-weight: 700; color: #455a64; flex-shrink: 0;">${percentage}%</span>
                         </div>
                         <div class="confidence-meter">
                             <div class="confidence-fill" style="width: ${barWidth}%; background: linear-gradient(90deg, rgba(52, 152, 219, 0.8) 0%, rgba(41, 128, 185, 0.8) 100%);"></div>
@@ -829,7 +872,7 @@ class DermatologyAIApp {
             html += `
                         </ol>
                         <p style="color: #546e7a; margin-top: 15px; font-size: 0.9rem; font-style: italic;">
-                            <i class="fas fa-info-circle"></i> Differential diagnoses listed by confidence level.
+                            <i class="fas fa-info-circle"></i> Listed by model confidence. This is not a diagnosis.
                         </p>
                     </div>
                 </div>
@@ -856,63 +899,70 @@ class DermatologyAIApp {
     renderXaiPanel(xai) {
         const pct = (v) => (v * 100).toFixed(1);
         const imgs = xai.images || {};
+        const name = displayName(xai.explained_class);
         let faithHtml = '';
         let agreeHtml = '';
-        
+
         if (xai.method_agreement) {
-            const a = xai.method_agreement;
-            agreeHtml = `<br><i class="fas fa-code-branch"></i> Grad-CAM and Occlusion agreement: <strong>${a.level}</strong> (Spearman &rho; = ${a.spearman_rho.toFixed(2)}).`;
+            const level = xai.method_agreement.level;
+            const agreeText = {
+                high: 'Both methods highlight similar areas, which makes this explanation more trustworthy.',
+                moderate: 'The two methods partly agree on the important areas.',
+                low: 'The two methods highlight different areas, so treat this heatmap as a rough guide only.'
+            }[level] || '';
+            agreeHtml = `<p class="xai-agreement"><i class="fas fa-code-branch"></i> ${agreeText}</p>`;
         }
-        
+
         if (xai.faithfulness) {
             const f = xai.faithfulness;
-            const hiddenPct = Math.round((f.fraction_hidden || 0.2) * 100);
-            const verdictText = {
-                strong: 'Strong evidence: hiding the highlighted region removes most of the model\'s confidence, far more than hiding a random region of the same size. The model is relying on the highlighted area.',
-                moderate: 'Moderate evidence: the highlighted region matters more than a random region, but the model also uses other parts of the image.',
-                weak: 'Weak evidence: hiding the highlighted region changes the result little. The model may be using wider context, so interpret this heatmap with caution.'
-            }[f.verdict] || '';
-            
+            const raised = f.confidence_highlight_hidden >= f.confidence_original;
+            const verdictText = raised
+                ? 'Hiding the highlighted area did not lower the confidence, so this heatmap does not explain the result well. The model is likely relying on the image as a whole.'
+                : {
+                    strong: 'Hiding the highlighted area removes most of the confidence, far more than hiding a random area. The model is relying on the highlighted area.',
+                    moderate: 'The highlighted area matters more than a random area, but the model also uses other parts of the image.',
+                    weak: 'Hiding the highlighted area changes the result only a little, so interpret this heatmap with caution.'
+                }[f.verdict] || '';
+
             faithHtml = `
                 <div class="xai-faith xai-verdict-${f.verdict}">
-                    <h5><i class="fas fa-vial"></i> Faithfulness check
+                    <h5><i class="fas fa-vial"></i> Does the heatmap explain the result?
                         <span class="xai-verdict-tag">${f.verdict}</span>
                     </h5>
                     <div class="xai-faith-grid">
-                        <div><span class="xai-num">${pct(f.confidence_original)}%</span><span class="xai-cap">Original confidence</span></div>
-                        <div><span class="xai-num">${pct(f.confidence_highlight_hidden)}%</span><span class="xai-cap">Top ${hiddenPct}% highlighted area hidden</span></div>
-                        <div><span class="xai-num">${pct(f.confidence_random_hidden)}%</span><span class="xai-cap">Random ${hiddenPct}% area hidden</span></div>
+                        <div><span class="xai-num">${pct(f.confidence_original)}%</span><span class="xai-cap">Confidence</span></div>
+                        <div><span class="xai-num">${pct(f.confidence_highlight_hidden)}%</span><span class="xai-cap">Highlighted area hidden</span></div>
+                        <div><span class="xai-num">${pct(f.confidence_random_hidden)}%</span><span class="xai-cap">Random area hidden</span></div>
                         <div><span class="xai-num">${pct(f.confidence_only_highlight)}%</span><span class="xai-cap">Only highlighted area shown</span></div>
                     </div>
                     <p class="xai-verdict-text">${verdictText}</p>
                 </div>
             `;
         }
-        
+
         return `
             <div class="xai-panel">
                 <div class="xai-header">
-                    <h4><i class="fas fa-eye"></i> Why this result? <span class="xai-sub-title">Explainable AI</span></h4>
+                    <h4><i class="fas fa-eye"></i> Why this result?</h4>
                     <div class="xai-toggle" role="group" aria-label="Explanation method">
                         <button type="button" class="xai-method active" data-method="gradcam">Grad-CAM</button>
                         ${imgs.occlusion_heatmap ? '<button type="button" class="xai-method" data-method="occlusion">Occlusion</button>' : ''}
                     </div>
                 </div>
                 <p class="xai-intro">
-                    The heatmap shows which parts of the image pushed the model towards
-                    <strong>${xai.explained_class}</strong>. Red and yellow areas had the strongest influence; blue areas had little.
+                    Red and yellow areas had the most influence on the result <strong>${name}</strong>; blue areas had little.
                 </p>
                 <div class="xai-images">
                     <figure>
                         <img src="${imgs.input}" alt="Image region analysed by the model">
-                        <figcaption>What the model saw (${xai.input_size}&times;${xai.input_size} centre crop)</figcaption>
+                        <figcaption>Area analysed</figcaption>
                     </figure>
                     <figure>
                         <div class="xai-stack">
                             <img src="${imgs.input}" alt="">
-                            <img class="xai-heat" src="${imgs.gradcam_heatmap}" alt="Attention heatmap" style="opacity:0.5">
+                            <img class="xai-heat" src="${imgs.gradcam_heatmap}" alt="Heatmap" style="opacity:0.5">
                         </div>
-                        <figcaption>Attention heatmap</figcaption>
+                        <figcaption>Heatmap</figcaption>
                     </figure>
                 </div>
                 <div class="xai-controls">
@@ -920,28 +970,19 @@ class DermatologyAIApp {
                         <input type="range" class="xai-opacity" min="0" max="100" value="50">
                     </label>
                     <a class="xai-download" download="explanation.jpg" href="${imgs.gradcam_overlay}">
-                        <i class="fas fa-download"></i> Save overlay
+                        <i class="fas fa-download"></i> Save image
                     </a>
                 </div>
-                <p class="xai-method-help">
-                    <strong>Grad-CAM</strong> reads the model's internal gradients; <strong>Occlusion</strong> blurs one patch at a time
-                    and measures how much the confidence falls. They work independently, so agreement between them adds trust.
-                </p>
-                <p class="xai-concentration">
-                    <i class="fas fa-bullseye"></i>
-                    ${pct(xai.concentration_top20 || 0)}% of the model's attention is concentrated in the top 20% of the image.
-                    ${agreeHtml}
-                </p>
+                ${agreeHtml}
                 ${faithHtml}
                 <p class="xai-note">
                     <i class="fas fa-info-circle"></i>
-                    Heatmaps explain how the AI model reached its output; they are not a clinical marking of the lesion.
-                    Method: ${xai.method}, ${xai.target_layer}.
+                    The heatmap shows how the AI reached its result. It is not a medical marking of the skin.
                 </p>
             </div>
         `;
     }
-    
+
     bindXaiPanel(container, xai) {
         const panel = container.querySelector('.xai-panel');
         if (!panel) return;
