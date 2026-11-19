@@ -371,11 +371,13 @@ class YoloClsExplainer:
         }
         if with_faithfulness:
             f = self.faithfulness(rgb, cam, c, fraction=0.2)
-            ratio = f["faithfulness_ratio"]
-            ratio = ratio if ratio is not None else (10.0 if f["drop_highlight"] > 1e-3 else 1.0)
-            if f["drop_highlight"] >= 0.3 and ratio >= 2:
+            p0 = f["confidence_original"]
+            covered = f["confidence_highlight_hidden"]
+            others = f["confidence_random_hidden"]
+            relative_drop = (p0 - covered) / p0 if p0 > 0 else 0.0
+            if relative_drop >= 0.5 and others - covered >= 0.25 * p0:
                 verdict = "strong"
-            elif f["drop_highlight"] >= 0.1 and ratio >= 1.3:
+            elif relative_drop >= 0.25 and others > covered:
                 verdict = "moderate"
             else:
                 verdict = "weak"

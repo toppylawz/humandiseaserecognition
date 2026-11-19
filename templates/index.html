@@ -22,9 +22,9 @@
 {% include "partials/plate.html" with photo=leg heat=leg_heat alt="Lower leg with a red, bumpy rash" ax="20.1" ay="52.2" bx="76.8" by="63.8" loading="eager" %}
 <div class="controls">{% include "partials/heat_toggle.html" %}</div>
 <div class="legend" aria-hidden="true" style="color: #E9E9E5"><span>Little influence</span><i></i><span>Most influence</span></div>
-<figcaption class="cap">
-<span class="figno">Fig. 1</span>
-<span><strong>Contact dermatitis, 27.8%.</strong> Hiding the marked fifth of the photo drops it to 0.2%. Hiding a random fifth: 46.5%.</span>
+<figcaption style="margin-top: 18px; max-width: 36em">
+<p class="answer"><strong>The model's answer: contact dermatitis, 28% sure.</strong></p>
+<p class="small" style="margin: 8px 0 0; color: #E9E9E5">Can you trust the heatmap? Yes. Covering the bright areas drops the model's confidence to under 1%. Covering other areas instead leaves it at 46%.</p>
 </figcaption>
 </figure>
 </div>
@@ -35,7 +35,7 @@
 <div><h3>Ruler</h3><p>Each large division is one cell of the 7 &#215; 7 grid the model looks through.</p></div>
 <div><h3>Heatmap</h3><p>Brighter means more influence on the answer. Dark means little or none.</p></div>
 <div><h3>Pins</h3><p>The strongest areas of influence.</p></div>
-<div><h3>Cover test</h3><p>Hide the marked areas, then random ones. If the marks matter, confidence falls further.</p></div>
+<div><h3>Trust check</h3><p>We cover the highlighted areas. If the model really used them, it becomes much less sure.</p></div>
 </div>
 </div>
 
@@ -50,18 +50,15 @@
 <div class="plates">
 <figure class="plate">
 {% include "partials/plate.html" with photo=wrist heat=wrist_heat alt="Inner wrist with a red, raised rash" ax="36.2" ay="48.7" %}
-<figcaption class="cap"><span class="figno">Fig. 2</span><span><strong>Contact dermatitis, 74.0%</strong></span></figcaption>
-{% include "partials/cover_test.html" with c0="74.0%" c1="0.2%" c2="0.1%" %}
+<figcaption class="answer" style="margin-top: 14px">The model's answer: <strong>contact dermatitis</strong>, 74% sure</figcaption>
 </figure>
 <figure class="plate">
 {% include "partials/plate.html" with photo=watch heat=watch_heat alt="Back of a wrist beside a watch strap, with small dark scabs" ax="50.0" ay="76.3" %}
-<figcaption class="cap"><span class="figno">Fig. 3</span><span><strong>Eczema, 43.5%</strong></span></figcaption>
-{% include "partials/cover_test.html" with c0="43.5%" c1="0.1%" c2="1.1%" %}
+<figcaption class="answer" style="margin-top: 14px">The model's answer: <strong>eczema</strong>, 44% sure</figcaption>
 </figure>
 <figure class="plate">
 {% include "partials/plate.html" with photo=forearm heat=forearm_heat alt="Forearm with small crusted sores" ax="47.8" ay="50.0" bx="60.7" by="20.1" %}
-<figcaption class="cap"><span class="figno">Fig. 4</span><span><strong>Bacterial skin infection, 24.5%</strong></span></figcaption>
-{% include "partials/cover_test.html" with c0="24.5%" c1="2.2%" c2="0.3%" %}
+<figcaption class="answer" style="margin-top: 14px">The model's answer: <strong>bacterial skin infection</strong>, 25% sure</figcaption>
 </figure>
 </div>
 </div>
@@ -92,7 +89,7 @@
 <li><span class="figno">1</span><h3>Check it is skin</h3><p>A separate model turns away photos that are not skin, such as pets, objects or screens.</p></li>
 <li><span class="figno">2</span><h3>Compare</h3><p>The main model scores the photo against 34 skin conditions and healthy skin.</p></li>
 <li><span class="figno">3</span><h3>Explain</h3><p>A heatmap marks the parts of the photo that drove the answer.</p></li>
-<li><span class="figno">4</span><h3>Test the explanation</h3><p>The cover test checks that hiding the marked areas really changes the answer.</p></li>
+<li><span class="figno">4</span><h3>Check the heatmap</h3><p>We cover the highlighted areas and see whether the model becomes less sure.</p></li>
 <li><span class="figno">5</span><h3>Discard</h3><p>The photo is held in memory only while this runs, then deleted. Nothing is stored.</p></li>
 </ol>
 </div>

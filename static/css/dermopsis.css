@@ -108,7 +108,7 @@ h3{font-size:22px;font-weight:500;font-stretch:100%;letter-spacing:-0.005em;line
 .drop{position:relative;aspect-ratio:1/1;outline:1px dashed #8E8E88;outline-offset:-1px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:32px;background:#F5F5F2}
 .crop{position:absolute;width:22px;height:22px;border-color:var(--ink);border-style:solid;border-width:0}
 .diff{list-style:none;margin:0;padding:0}
-.diff li{display:grid;grid-template-columns:1fr 64px;gap:4px 16px;padding:12px 0;border-top:1px solid var(--rule);font-size:16px;line-height:1.35}
+.diff li{display:grid;grid-template-columns:1fr auto;gap:4px 16px;padding:12px 0;border-top:1px solid var(--rule);font-size:16px;line-height:1.35}
 .diff li span:last-child{text-align:right;font-weight:600}
 .diff li i{grid-column:1/-1;height:4px;background:#E7E7E3}
 .diff li i b{display:block;height:100%;background:var(--ink)}
@@ -171,3 +171,11 @@ h3{font-size:22px;font-weight:500;font-stretch:100%;letter-spacing:-0.005em;line
 .ct-grid{grid-template-columns:minmax(0,280px) minmax(0,720px);align-items:start}
 @media (max-width:1100px){.result-grid{grid-template-columns:1fr}}
 @media (max-width:900px){.an-grid{grid-template-columns:1fr;gap:48px}}
+.trust-verdict{font-stretch:112%;font-weight:300;font-size:40px;line-height:1.1;letter-spacing:-0.02em;margin:0 0 10px}
+.trust li span:first-child{font-size:16px}
+.trust li:nth-child(1) i b{background:var(--ink)}
+.trust li:nth-child(2) i b{background:var(--cyan)}
+.trust li:nth-child(3) i b{background:#A0A0A0}
+.answer{font-size:17px;line-height:1.45;margin:0}
+.answer strong{font-weight:600}
+.diff li span:nth-child(2){white-space:nowrap}

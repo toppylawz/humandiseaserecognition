@@ -42,7 +42,7 @@ function displayName(label) {
 
 function pct(value) {
   const p = value * 100;
-  return (p > 0 && p < 0.05 ? '<0.1' : p.toFixed(1)) + '%';
+  return p < 1 ? 'under 1%' : Math.round(p) + '%';
 }
 
 (() => {
@@ -232,15 +232,17 @@ function pct(value) {
     const f = xai.faithfulness;
     if (f) {
       const copy = {
-        strong: ['The explanation holds up', 'Hiding the marked fifth of the photo cuts the confidence far more than hiding a random fifth, so the model really used the marked areas.'],
-        moderate: ['The explanation partly holds up', 'Hiding the marked fifth of the photo cuts the confidence more than hiding a random fifth, but not by much.'],
-        weak: ['The explanation does not hold up', 'Hiding the marked fifth of the photo changes the confidence no more than hiding a random fifth. Treat this result with extra caution.']
+        strong: ['Yes', 'Covering the highlighted areas made the model much less sure. Covering other areas did not. So the highlighted areas really are what it used.'],
+        moderate: ['Partly', 'Covering the highlighted areas made the model less sure, but covering other areas had a similar effect.'],
+        weak: ['Not for this photo', 'Covering the highlighted areas changed the answer no more than covering other areas. The model may be using something else, such as the background.']
       }[f.verdict] || ['', ''];
       $('coverTitle').textContent = copy[0];
       $('coverText').textContent = copy[1];
-      $('c0').textContent = pct(f.confidence_original);
-      $('c1').textContent = pct(f.confidence_highlight_hidden);
-      $('c2').textContent = pct(f.confidence_random_hidden);
+      $('coverLabel').textContent = displayName(top.label).toLowerCase();
+      [f.confidence_original, f.confidence_highlight_hidden, f.confidence_random_hidden].forEach((v, i) => {
+        $('c' + i).textContent = pct(v);
+        $('b' + i).style.width = Math.max(0, Math.min(100, v * 100)).toFixed(1) + '%';
+      });
       $('coverBox').classList.toggle('verdict-weak', f.verdict === 'weak');
       $('coverTest').classList.remove('hidden');
     }
