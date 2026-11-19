@@ -83,6 +83,9 @@ def to_data_uri(arr: np.ndarray, fmt: str = "JPEG", quality: int = 88) -> str:
     if fmt.upper() == "JPEG":
         img.save(buf, format="JPEG", quality=quality, optimize=True)
         mime = "image/jpeg"
+    elif fmt.upper() == "WEBP":
+        img.save(buf, format="WEBP", quality=quality)
+        mime = "image/webp"
     else:
         img.save(buf, format="PNG", optimize=True)
         mime = "image/png"
@@ -306,39 +309,68 @@ class YoloClsExplainer:
         return float(flat[:k].sum() / total)
 
     # --------------------------------------------------------- web summary
+    @staticmethod
+    def heat_layer(heatmap: np.ndarray, size: int = 448) -> np.ndarray:
+        """Transparent magma layer: colour and opacity both follow the heatmap."""
+        h = np.asarray(Image.fromarray((np.clip(heatmap, 0, 1) * 65535).astype(np.int32), "I")
+                       .resize((size, size), Image.BICUBIC), dtype=np.float64) / 65535
+        h = np.clip(h, 0, 1)
+        if _mpl_colormaps is not None:
+            rgb = _mpl_colormaps["magma"](0.35 + 0.65 * h)[..., :3]
+        else:
+            rgb = np.stack([h, h ** 2, 0.4 * (1 - h)], axis=-1)
+        alpha = np.clip((h - 0.22) / 0.78, 0, 1) * 0.96
+        return (np.dstack([rgb, alpha]) * 255).round().astype(np.uint8)
+
+    @staticmethod
+    def peaks(heatmap: np.ndarray, k: int = 2, min_gap: float = 0.22, margin: float = 0.08) -> List[List[float]]:
+        """Up to k separated hotspots as [x%, y%], ignoring the outer margin."""
+        S = heatmap.shape[0]
+        t = torch.from_numpy(heatmap.astype(np.float32))[None, None]
+        smooth = F.avg_pool2d(t, 15, stride=1, padding=7)
+        local = F.max_pool2d(smooth, 61, stride=1, padding=30)
+        hs = smooth[0, 0].numpy()
+        is_peak = (smooth == local)[0, 0].numpy() & (hs > 0.35 * hs.max())
+        ys, xs = np.nonzero(is_peak)
+        out: List[List[float]] = []
+        for i in np.argsort(-hs[ys, xs]):
+            x, y = xs[i] / S, ys[i] / S
+            if min(x, y, 1 - x, 1 - y) < margin:
+                continue
+            if all(np.hypot(x - a / 100, y - b / 100) > min_gap for a, b in out):
+                out.append([round(float(x) * 100, 1), round(float(y) * 100, 1)])
+            if len(out) == k:
+                break
+        return out
+
+    @staticmethod
+    def photo_crop(pil_img: Image.Image, size: int = 640) -> Image.Image:
+        """The centre square the model sees, kept at display resolution."""
+        img = pil_img.convert("RGB")
+        w, h = img.size
+        s = min(w, h)
+        img = img.crop(((w - s) // 2, (h - s) // 2, (w - s) // 2 + s, (h - s) // 2 + s))
+        return img.resize((min(size, s),) * 2, Image.LANCZOS) if s > size else img
+
     def explain_for_web(self, pil_img: Image.Image, class_index: Optional[int] = None,
-                        with_faithfulness: bool = True, with_occlusion: bool = True) -> Dict[str, object]:
+                        with_faithfulness: bool = True) -> Dict[str, object]:
         """Compact JSON-serialisable explanation for the analyser page."""
         x, rgb = self.preprocess(pil_img)
         r = self.cams(x, class_index=class_index)
         c = r["class_index"]
-        label = self.class_names[c] if c < len(self.class_names) else f"class_{c}"
+        cam = r["gradcam"]
 
+        photo = np.asarray(self.photo_crop(pil_img))
         payload = {
-            "method": "Grad-CAM + Occlusion sensitivity" if with_occlusion else "Grad-CAM",
-            "target_layer": "Classify head (pre-pooling 1x1 conv)" if self.target_layer_name == "head" else "Backbone (C2PSA)",
-            "explained_class": label,
-            "explained_class_index": c,
-            "input_size": self.imgsz,
-            "feature_map_size": list(r["feature_map_size"]),
+            "explained_class": self.class_names[c] if c < len(self.class_names) else f"class_{c}",
             "images": {
-                "input": to_data_uri(rgb),
-                "gradcam_heatmap": to_data_uri(colorize(r["gradcam"])),
-                "gradcam_overlay": to_data_uri(overlay(rgb, r["gradcam"])),
+                "photo": to_data_uri(photo, quality=90),
+                "heat": to_data_uri(self.heat_layer(cam), fmt="WEBP"),
             },
-            "concentration_top20": self.concentration(r["gradcam"], 0.2),
+            "pins": self.peaks(cam),
         }
-        if with_occlusion:
-            occ = _normalise_map(self.occlusion(rgb, c))
-            payload["images"]["occlusion_heatmap"] = to_data_uri(colorize(occ))
-            payload["images"]["occlusion_overlay"] = to_data_uri(overlay(rgb, occ))
-            agree = self.rank_agreement(r["gradcam"], occ)
-            payload["method_agreement"] = {
-                "spearman_rho": agree,
-                "level": "high" if agree >= 0.6 else ("moderate" if agree >= 0.3 else "low"),
-            }
         if with_faithfulness:
-            f = self.faithfulness(rgb, r["gradcam"], c, fraction=0.2)
+            f = self.faithfulness(rgb, cam, c, fraction=0.2)
             ratio = f["faithfulness_ratio"]
             ratio = ratio if ratio is not None else (10.0 if f["drop_highlight"] > 1e-3 else 1.0)
             if f["drop_highlight"] >= 0.3 and ratio >= 2:

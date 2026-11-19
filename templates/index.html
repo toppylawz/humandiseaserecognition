@@ -1,143 +1,137 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% load static %}
-{% block title %}Dermatology AI Assistant - Home{% endblock %}
-
-{% block meta_description %}An advanced AI research tool for preliminary dermatological analysis. Explore our technology, research goals, and try the analysis tool.{% endblock %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/home.css' %}">
-{% endblock %}
+{% block title %}Dermopsis: an atlas of what the model sees{% endblock %}
 
 {% block content %}
-<!-- Hero Section -->
-<section class="hero">
-    <div class="container hero-content">
-        <div class="hero-text">
-            <h1>Advancing Dermatological Screening with AI</h1>
-            <p class="hero-subtitle">A research platform for preliminary, non-invasive analysis of skin conditions using computer vision and deep learning, with a visual explanation for every result.</p>
-            <div class="hero-buttons">
-                <a href="{% url 'analyzer' %}" class="btn btn-primary btn-large">
-                    <i class="fas fa-play-circle"></i> Try the Analyzer
-                </a>
-                {% comment %} <a href="{% url 'about' %}#research" class="btn btn-outline btn-large">
-                    <i class="fas fa-chart-line"></i> View Research
-                </a> {% endcomment %}
-            </div>
-            <div class="hero-stats">
-                <div class="stat-item">
-                    <span class="stat-number">34</span>
-                    <span class="stat-label">Skin Conditions</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-number">XAI</span>
-                    <span class="stat-label">Explained Results</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-number">&lt;5s</span>
-                    <span class="stat-label">Analysis Time</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-number">24/7</span>
-                    <span class="stat-label">Accessible</span>
-                </div>
-            </div>
-        </div>
-        <div class="hero-visual">
-            <div class="hero-image-placeholder">
-                <i class="fas fa-robot" style="font-size: 4rem; color: var(--primary-color);"></i>
-                <div class="visual-overlay">
-                    <div class="pulse-ring"></div>
-                    <div class="pulse-ring delay-1"></div>
-                    <div class="pulse-ring delay-2"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-</br>
+{% static 'images/plates/leg.jpg' as leg %}{% static 'images/plates/leg_heat.webp' as leg_heat %}
+{% static 'images/plates/wrist.jpg' as wrist %}{% static 'images/plates/wrist_heat.webp' as wrist_heat %}
+{% static 'images/plates/watch.jpg' as watch %}{% static 'images/plates/watch_heat.webp' as watch_heat %}
+{% static 'images/plates/forearm.jpg' as forearm %}{% static 'images/plates/forearm_heat.webp' as forearm_heat %}
 
-<!-- How It Works Section -->
-<section class="section-padding how-it-works">
-    <div class="container">
-        <div class="section-header">
-            <span class="section-label">Process</span>
-            <h2>How the AI Analysis Works</h2>
-            <p class="section-subtitle">Our three-step pipeline transforms image input into actionable insights</p>
-        </div>
-        
-        <div class="process-steps">
-            <div class="step">
-                <div class="step-number">01</div>
-                <div class="step-icon">
-                    <i class="fas fa-camera"></i>
-                </div>
-                <h3>Image Capture</h3>
-                <p>Use live camera feed or upload high-quality images of dermatological concerns with proper lighting and focus.</p>
-            </div>
-            
-            <div class="step">
-                <div class="step-number">02</div>
-                <div class="step-icon">
-                    <i class="fas fa-brain"></i>
-                </div>
-                <h3>AI Processing</h3>
-                <p>A gate model first checks that the photo shows human skin. A YOLO11 classifier then ranks 34 skin conditions and healthy skin.</p>
-            </div>
-            
-            <div class="step">
-                <div class="step-number">03</div>
-                <div class="step-icon">
-                    <i class="fas fa-chart-pie"></i>
-                </div>
-                <h3>Result Delivery</h3>
-                <p>Receive the five most likely conditions with confidence scores, plus a heatmap showing which areas of the image drove the result.</p>
-            </div>
-            
-            <div class="process-connector"></div>
-        </div>
-    </div>
+<section class="studio" aria-labelledby="h1">
+<div class="wrap hero">
+<div>
+<h1 id="h1">An atlas of what the model sees</h1>
+<p class="lede" style="margin: 32px 0 0">Dermopsis suggests which skin condition a photo shows. Then it marks the parts of the photo that drove the answer, and tests whether those marks are true.</p>
+<div class="hero-actions">
+<a class="btn btn-light" href="{% url 'analyzer' %}">Analyse a photo</a>
+<a class="btn btn-line" href="#plates">See more plates</a>
+</div>
+</div>
+<figure class="plate" style="color: #FFFFFF; margin: 0" data-heat-scope>
+{% include "partials/plate.html" with photo=leg heat=leg_heat alt="Lower leg with a red, bumpy rash" ax="20.1" ay="52.2" bx="76.8" by="63.8" loading="eager" %}
+<div class="controls">{% include "partials/heat_toggle.html" %}</div>
+<div class="legend" aria-hidden="true" style="color: #E9E9E5"><span>Little influence</span><i></i><span>Most influence</span></div>
+<figcaption class="cap">
+<span class="figno">Fig. 1</span>
+<span><strong>Contact dermatitis, 27.8%.</strong> Hiding the marked fifth of the photo drops it to 0.2%. Hiding a random fifth: 46.5%.</span>
+</figcaption>
+</figure>
+</div>
 </section>
 
-<!-- Features Section -->
-</br>
-<section class="section-padding features">
-    <div class="container">
-        <div class="section-header">
-            <span class="section-label">Features</span>
-            <h2>Designed for Research & Education</h2>
-            <p class="section-subtitle">Built with academic rigour and practical application in mind</p>
-        </div>
-        
-        <div class="features-grid">
-            <div class="feature-card">
-                <div class="feature-icon">
-                    <i class="fas fa-shield-alt"></i>
-                </div>
-                <h3>Ethical Framework</h3>
-                <p>Designed as a preliminary screening aid with clear disclaimers and emphasis on professional diagnosis.</p>
-            </div>
-            
-            <div class="feature-card">
-                <div class="feature-icon">
-                    <i class="fas fa-bolt"></i>
-                </div>
-                <h3>Real-Time Analysis</h3>
-                <p>Upload a photo or use the live camera for immediate feedback. Images are analysed in memory and never stored.</p>
-            </div>
-            
-            <div class="feature-card">
-                <div class="feature-icon">
-                    <i class="fas fa-users"></i>
-                </div>
-                <h3>Collaboration Ready</h3>
-                <p>Built to facilitate research partnerships, clinical validation, and dataset expansion.</p>
-            </div>
-        </div>
-    </div>
+<div class="wrap">
+<div class="key" aria-label="How to read a plate">
+<div><h3>Ruler</h3><p>Each large division is one cell of the 7 &#215; 7 grid the model looks through.</p></div>
+<div><h3>Heatmap</h3><p>Brighter means more influence on the answer. Dark means little or none.</p></div>
+<div><h3>Pins</h3><p>The strongest areas of influence.</p></div>
+<div><h3>Cover test</h3><p>Hide the marked areas, then random ones. If the marks matter, confidence falls further.</p></div>
+</div>
+</div>
+
+<section class="section" id="plates" aria-labelledby="plates-h" data-heat-scope>
+<div class="wrap">
+<div class="section-head">
+<div>
+<h2 id="plates-h">More plates</h2>
+<div class="controls" style="margin-top: 28px">{% include "partials/heat_toggle.html" %}</div>
+</div>
+</div>
+<div class="plates">
+<figure class="plate">
+{% include "partials/plate.html" with photo=wrist heat=wrist_heat alt="Inner wrist with a red, raised rash" ax="36.2" ay="48.7" %}
+<figcaption class="cap"><span class="figno">Fig. 2</span><span><strong>Contact dermatitis, 74.0%</strong></span></figcaption>
+{% include "partials/cover_test.html" with c0="74.0%" c1="0.2%" c2="0.1%" %}
+</figure>
+<figure class="plate">
+{% include "partials/plate.html" with photo=watch heat=watch_heat alt="Back of a wrist beside a watch strap, with small dark scabs" ax="50.0" ay="76.3" %}
+<figcaption class="cap"><span class="figno">Fig. 3</span><span><strong>Eczema, 43.5%</strong></span></figcaption>
+{% include "partials/cover_test.html" with c0="43.5%" c1="0.1%" c2="1.1%" %}
+</figure>
+<figure class="plate">
+{% include "partials/plate.html" with photo=forearm heat=forearm_heat alt="Forearm with small crusted sores" ax="47.8" ay="50.0" bx="60.7" by="20.1" %}
+<figcaption class="cap"><span class="figno">Fig. 4</span><span><strong>Bacterial skin infection, 24.5%</strong></span></figcaption>
+{% include "partials/cover_test.html" with c0="24.5%" c1="2.2%" c2="0.3%" %}
+</figure>
+</div>
+</div>
 </section>
-</br><!-- Call to Action Section -->
+
+<section class="section" id="accuracy" aria-labelledby="acc-h">
+<div class="wrap">
+<div class="section-head"><h2 id="acc-h">How often it is right</h2></div>
+<div class="acc">
+<div>
+<p class="big" style="margin: 0">6 in 10</p>
+<div class="tally blue" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></div>
+<p class="small" style="margin: 0">First answer correct.</p>
+</div>
+<div>
+<p class="big" style="margin: 0">9 in 10</p>
+<div class="tally" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+<p class="small" style="margin: 0">Right answer within its top five.</p>
+</div>
+</div>
+</div>
+</section>
+
+<section class="section" id="method" aria-labelledby="method-h">
+<div class="wrap">
+<div class="section-head"><h2 id="method-h">What happens to a photo</h2></div>
+<ol class="steps">
+<li><span class="figno">1</span><h3>Check it is skin</h3><p>A separate model turns away photos that are not skin, such as pets, objects or screens.</p></li>
+<li><span class="figno">2</span><h3>Compare</h3><p>The main model scores the photo against 34 skin conditions and healthy skin.</p></li>
+<li><span class="figno">3</span><h3>Explain</h3><p>A heatmap marks the parts of the photo that drove the answer.</p></li>
+<li><span class="figno">4</span><h3>Test the explanation</h3><p>The cover test checks that hiding the marked areas really changes the answer.</p></li>
+<li><span class="figno">5</span><h3>Discard</h3><p>The photo is held in memory only while this runs, then deleted. Nothing is stored.</p></li>
+</ol>
+</div>
+</section>
+
+<section class="section" aria-labelledby="use-h">
+<div class="wrap">
+<div class="section-head"><h2 id="use-h">When to use it, and when not to</h2></div>
+<div class="two">
+<div>
+<h3 style="margin-bottom: 12px">Use Dermopsis to</h3>
+<ul class="list">
+<li>Learn how skin conditions look and how they differ</li>
+<li>See how an image model reaches an answer</li>
+<li>Prepare questions before seeing a GP or pharmacist</li>
+</ul>
+</div>
+<div>
+<h3 style="margin-bottom: 12px">Do not use it to</h3>
+<ul class="list">
+<li>Decide whether to seek care</li>
+<li>Rule out skin cancer or any serious condition</li>
+<li>Choose or change a treatment</li>
+</ul>
+</div>
+</div>
+<p class="urgent">If a rash spreads fast with a fever, or you have swelling of the face or trouble breathing, <b>call 999</b>. For anything that worries you, call NHS 111 or see your GP.</p>
+</div>
+</section>
+
+<section class="section" aria-labelledby="research-h">
+<div class="wrap two" style="align-items: end">
+<h2 id="research-h">Built from an MSc project, open to partners</h2>
+<div>
+<p style="margin: 0 0 24px; max-width: 34em">Dermopsis began as MSc research at Sheffield Hallam University and is developed by Avotrax. We would like to work with clinicians and researchers on testing it, especially across a wider range of skin tones.</p>
+<a class="btn btn-line" href="{% url 'contact' %}">Get in touch</a>
+</div>
+</div>
+</section>
 {% endblock %}
 
-{% block extra_js %}
-<script src="{% static 'js/home.js' %}"></script>
-{% endblock %}
+{% block credits %}Example photos: <a href="https://github.com/google-research-datasets/scin" target="_blank" rel="noopener">SCIN, Google Research</a>, under the <a href="https://github.com/google-research-datasets/scin/blob/main/LICENSE" target="_blank" rel="noopener">SCIN Data Use License</a>, with heatmaps added. {% endblock %}

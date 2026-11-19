@@ -1,198 +1,75 @@
 <!DOCTYPE html>
 {% load static %}
-<html lang="en">
+<html lang="en-GB">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Dermatology AI Assistant{% endblock %}</title>
-    
-    <!-- Global Meta Tags -->
-    <meta name="description" content="{% block meta_description %}An AI-powered research tool for preliminary dermatological analysis.{% endblock %}">
-    <meta name="keywords" content="dermatology, AI, skin analysis, medical research, machine learning">
-    <meta name="author" content="Insighta Research Team">
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="{% static 'images/favicon.ico' %}">
-    
-    <!-- Global CSS & Fonts -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Source+Serif+Pro:wght@400;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/base.css' %}">
-    
-    <!-- Page-specific CSS -->
-    {% block extra_css %}{% endblock %}
-    
-    <!-- Page-specific head content -->
-    {% block extra_head %}{% endblock %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Dermopsis{% endblock %}</title>
+<meta name="description" content="{% block meta_description %}Dermopsis suggests which skin condition a photo shows, marks the parts of the photo that drove the answer, and tests whether those marks are true.{% endblock %}">
+<link rel="icon" type="image/svg+xml" href="{% static 'images/favicon.svg' %}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/dermopsis.css' %}">
+{% block extra_head %}{% endblock %}
 </head>
 <body>
-    <!-- Skip to main content -->
-    <a href="#main-content" class="skip-link">Skip to main content</a>
-    
-    <!-- Navigation -->
-    <header class="main-header">
-        <div class="container nav-container">
-            <a href="{% url 'home' %}" class="logo">
-                <i class="fas fa-stethoscope logo-icon"></i>
-                <span>Insighta AI Assistant</span>
-            </a>
-            
-            <!-- Mobile menu toggle -->
-            <button class="mobile-menu-toggle" aria-label="Toggle menu" aria-expanded="false">
-                <i class="fas fa-bars"></i>
-            </button>
-            
-            <!-- Main Navigation -->
-            <nav class="main-nav" id="main-nav">
-                <ul class="nav-links">
-                    <li><a href="{% url 'home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">
-                        <i class="fas fa-home"></i> Home
-                    </a></li>
-                    {% comment %} <li><a href="{% url 'about' %}" class="{% if request.resolver_match.url_name == 'about' %}active{% endif %}">
-                        <i class="fas fa-microscope"></i> Research
-                    </a></li> {% endcomment %}
-                    <li><a href="{% url 'analyzer' %}" class="{% if request.resolver_match.url_name == 'analyzer' %}active{% endif %}">
-                        <i class="fas fa-play-circle"></i> Analyser
-                    </a></li>
-                    <li><a href="{% url 'contact' %}" class="{% if request.resolver_match.url_name == 'contact' %}active{% endif %}">
-                        <i class="fas fa-handshake"></i> Contact 
-                    </a></li>
-                    <li><a href="{% url 'privacy' %}" class="btn-outline small">
-                        <i class="fas fa-shield-alt"></i> Privacy
-                    </a></li>
-                </ul>
-            </nav>
-        </div>
-    </header>
+{% with page=request.resolver_match.url_name %}
+<a class="skip" href="#main">Skip to content</a>
+{% include "partials/checker.html" %}
+<header class="top">
+<div class="wrap">
+<a class="brand" href="{% url 'home' %}">{% include "partials/mark.html" %}<b>Dermopsis</b><i>An atlas of what the model sees</i></a>
+<nav class="nav" aria-label="Main">
+<a class="opt" href="{% url 'home' %}"{% if page == 'home' %} aria-current="page"{% endif %}>Atlas</a>
+<a class="opt" href="{% url 'home' %}#accuracy">Accuracy</a>
+<a class="opt" href="{% url 'home' %}#method">Method</a>
+<a class="opt" href="{% url 'privacy' %}"{% if page == 'privacy' %} aria-current="page"{% endif %}>Privacy</a>
+<a class="opt" href="{% url 'contact' %}"{% if page == 'contact' %} aria-current="page"{% endif %}>Contact</a>
+<a class="btn" href="{% url 'analyzer' %}"><span class="long">Analyse a photo</span><span class="short">Analyse</span></a>
+</nav>
+</div>
+</header>
+<nav class="mobile-tabs" aria-label="Sections">
+<a href="{% url 'home' %}" style="background: #735244; color: #FFFFFF">Atlas</a>
+<a href="{% url 'analyzer' %}" style="background: #383D96; color: #FFFFFF">Analyse</a>
+<a href="{% url 'home' %}#accuracy" style="background: #469449; color: #FFFFFF">Accuracy</a>
+<a href="{% url 'home' %}#method" style="background: #E0A32E; color: #191919">Method</a>
+<a href="{% url 'privacy' %}" style="background: #5E3C6C; color: #FFFFFF">Privacy</a>
+<a href="{% url 'contact' %}" style="background: #0885A1; color: #FFFFFF">Contact</a>
+</nav>
+<nav class="tabs" aria-label="Sections">
+<a href="{% url 'home' %}" style="background: #735244; color: #FFFFFF"{% if page == 'home' %} aria-current="page"{% endif %}>Atlas</a>
+<a href="{% url 'analyzer' %}" style="background: #383D96; color: #FFFFFF"{% if page == 'analyzer' %} aria-current="page"{% endif %}>Analyse</a>
+<a href="{% url 'home' %}#accuracy" style="background: #469449; color: #FFFFFF">Accuracy</a>
+<a href="{% url 'home' %}#method" style="background: #E0A32E; color: #191919">Method</a>
+<a href="{% url 'privacy' %}" style="background: #5E3C6C; color: #FFFFFF"{% if page == 'privacy' %} aria-current="page"{% endif %}>Privacy</a>
+<a href="{% url 'contact' %}" style="background: #0885A1; color: #FFFFFF"{% if page == 'contact' %} aria-current="page"{% endif %}>Contact</a>
+</nav>
+{% endwith %}
 
-    <!-- Main Content Area -->
-    <main id="main-content">
-        {% block content %}
-        <!-- Page-specific content goes here -->
-        {% endblock %}
-    </main>
+<main id="main">
+{% block content %}{% endblock %}
+</main>
 
-    <!-- Footer -->
-    <footer class="main-footer">
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-brand">
-                    <div class="footer-logo">Insighta AI Assistant</div>
-                    <p>A research initiative exploring AI applications in Dermatology.</p>
-                    <div class="footer-social">
-                        <a href="https://github.com/toppylawz/humandiseaserecognition" aria-label="GitHub"><i class="fab fa-github"></i></a>
-                        <a href="https://www.linkedin.com/in/adeolu-olofintuyi-6251bb9b/" aria-label="LinkedIn"><i class="fab fa-linkedin"></i></a>
-                        <a href="#" aria-label="ResearchGate"><i class="fab fa-researchgate"></i></a>
-                    </div>
-                </div>
-                
-                <div class="footer-links">
-                    <h4>Navigation</h4>
-                    <ul>
-                        <li><a href="{% url 'home' %}">Home</a></li>
-                        <li><a href="{% url 'analyzer' %}">Analysis Tool</a></li>
-                        <li><a href="{% url 'contact' %}">Contact </a></li>
-                        <li><a href="{% url 'privacy' %}">Privacy & Terms</a></li>
-                    </ul>
-                </div>
-                
-                {% comment %} <div class="footer-links">
-                    <h4>Research Team</h4>
-                    <ul>
-                        <li><i class="fas fa-user-graduate"></i> Adeolu Olofintuyi</li>
-                        <li><i class="fas fa-envelope"></i> <a href="mailto:adeolu@techwagon.org">adeolu@techwagon.org</a></li>
-                        <li><i class="fas fa-chalkboard-teacher"></i> Dr. Ajmal Gharib</li>
-                        <li><i class="fas fa-envelope"></i> <a href="mailto:A.Gharib@shu.ac.uk">A.Gharib@shu.ac.uk</a></li>
-                    </ul>
-                </div> {% endcomment %}
-                
-                <div class="footer-links">
-                    <h4>Important</h4>
-                    <ul>
-                        <li><a href="{% url 'privacy' %}#disclaimer"><i class="fas fa-exclamation-triangle"></i> Medical Disclaimer</a></li>
-                        <li><a href="{% url 'privacy' %}#ethics"><i class="fas fa-balance-scale"></i> Ethical Guidelines</a></li>
-                        <li><a href="{% url 'contact' %}#collaborate"><i class="fas fa-handshake"></i> Contact</a></li>
-                    </ul>
-                </div>
-            </div>
-            
-            <div class="footer-bottom">
-                <div class="copyright">
-                    &copy; 2026 Dermatology AI Assistant Research Project. All rights reserved.
-                    <br><small>This tool is for academic research and educational purposes only. Not a certified medical device.</small>
-                </div>
-                <div class="footer-credits">
-                    <a href="https://avotrax.co.uk" target="_blank" rel="noopener">Avotrax Limited</a>
-                </div>
-            </div>
-        </div>
-    </footer>
-
-    <!-- Global JavaScript -->
-    <script src="{% static 'js/main.js' %}"></script>
-    
-    <!-- Page-specific JavaScript -->
-    {% block extra_js %}{% endblock %}
-    
-
-    {% block body_end %}
-<!-- Debug script for mobile menu -->
-<script>
-    (function() {
-        console.log('=== MOBILE MENU DEBUG ===');
-        
-        // Check if we're on mobile
-        const isMobile = window.innerWidth <= 768;
-        console.log('Window width:', window.innerWidth, 'Is mobile:', isMobile);
-        
-        // Find elements
-        const toggle = document.querySelector('.mobile-menu-toggle');
-        const nav = document.querySelector('.main-nav');
-        const links = document.querySelectorAll('.nav-links a');
-        
-        console.log('Elements found:', {
-            toggle: toggle ? 'YES' : 'NO',
-            nav: nav ? 'YES' : 'NO',
-            links: links.length
-        });
-        
-        // Check CSS
-        if (toggle) {
-            const toggleStyles = window.getComputedStyle(toggle);
-            console.log('Toggle button styles:', {
-                display: toggleStyles.display,
-                visibility: toggleStyles.visibility,
-                position: toggleStyles.position,
-                zIndex: toggleStyles.zIndex,
-                opacity: toggleStyles.opacity,
-                pointerEvents: toggleStyles.pointerEvents
-            });
-            
-            // Add visual indicator for debugging
-            toggle.style.outline = '2px solid red';
-        }
-        
-        if (nav) {
-            const navStyles = window.getComputedStyle(nav);
-            console.log('Nav styles:', {
-                display: navStyles.display,
-                position: navStyles.position,
-                right: navStyles.right,
-                width: navStyles.width
-            });
-            
-            // Add visual indicator
-            nav.style.outline = '2px solid blue';
-        }
-        
-        // Check for any JavaScript errors
-        window.onerror = function(msg, url, line) {
-            console.error('JavaScript Error:', msg, 'at', line);
-        };
-        
-        console.log('=== END DEBUG ===');
-    })();
-</script>
-{% endblock %}
+<footer class="foot">
+<div class="wrap">
+<div>
+<a class="brand" href="{% url 'home' %}">{% include "partials/mark.html" with size=28 %}<b>Dermopsis</b></a>
+<p style="margin: 18px 0 0; max-width: 30em">A research and education tool. It is not a medical device and it does not diagnose.</p>
+</div>
+<div>
+<p style="margin: 0 0 6px; color: #FFFFFF; font-weight: 600">Contact</p>
+<a href="mailto:adeolu_o@avotrax.co.uk">adeolu_o@avotrax.co.uk</a>
+</div>
+<div>
+<p style="margin: 0 0 6px; color: #FFFFFF; font-weight: 600">Built by</p>
+<a href="https://avotrax.co.uk" target="_blank" rel="noopener">Avotrax Limited</a>
+</div>
+<p class="fine" style="margin: 0">{% block credits %}{% endblock %}&#169; 2026 Avotrax Limited.</p>
+</div>
+</footer>
+<script src="{% static 'js/site.js' %}" defer></script>
+{% block extra_js %}{% endblock %}
 </body>
 </html>

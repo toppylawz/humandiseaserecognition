@@ -1,309 +1,119 @@
-{% extends 'base.html' %}
-{% load static %}
-
-{% block title %}AI Dermatology Analyzer | Real-time Skin Analysis{% endblock %}
-
-{% block meta_description %}Use our AI-powered dermatology analyzer for real-time skin lesion analysis. Upload images or use live camera feed for instant preliminary assessment.{% endblock %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/analyzer.css' %}">
-{% endblock %}
+{% extends "base.html" %}
+{% block title %}Analyse a skin photo | Dermopsis{% endblock %}
 
 {% block content %}
-
-<div id="analyzerPage"
-     data-predict-url="{% url 'predict' %}"
-     data-predict-frame-url="{% url 'predict_frame' %}">
+<div class="wrap" id="analyser" data-predict-url="{% url 'predict' %}" style="padding-top: 64px; padding-bottom: 112px">
+<div class="section-head" style="margin-bottom: 48px">
+<h1 style="font-size: clamp(40px, 4.4vw, 64px)">Analyse a skin photo</h1>
+<p class="lede muted" style="margin: 4px 0 0">Use a sharp close-up in daylight. The photo is analysed in memory and deleted straight away.</p>
 </div>
 
-<!-- Analyzer Header -->
-<section class="analyzer-header section-padding">
-    <div class="container">
-        <div class="analyzer-header-content">
-            <div class="analyzer-intro">
-                <span class="section-label">Live Analysis</span>
-                <h1>AI Dermatology Analyzer</h1>
-                <p class="subtitle">Upload an image or use real-time camera analysis for instant preliminary assessment of dermatological conditions.</p>
-                
-                <div class="analyzer-features">
-                    <div class="feature-badge">
-                        <i class="fas fa-camera"></i>
-                        <span>Live Camera</span>
-                    </div>
-                    <div class="feature-badge">
-                        <i class="fas fa-upload"></i>
-                        <span>Image Upload</span>
-                    </div>
-                    <div class="feature-badge">
-                        <i class="fas fa-brain"></i>
-                        <span>AI Analysis</span>
-                    </div>
-                    <div class="feature-badge">
-                        <i class="fas fa-chart-line"></i>
-                        <span>Top-5 Results</span>
-                    </div>
-                    <div class="feature-badge">
-                        <i class="fas fa-eye"></i>
-                        <span>Explainable AI</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="analyzer-stats">
-                <div class="stat-card">
-                    <i class="fas fa-clock"></i>
-                    <div>
-                        <h3>&lt; 5 Seconds</h3>
-                        <p>Analysis Time</p>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <i class="fas fa-eye"></i>
-                    <div>
-                        <h3>Explained</h3>
-                        <p>Heatmap for Every Result</p>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <i class="fas fa-database"></i>
-                    <div>
-                        <h3>35</h3>
-                        <p>Skin Categories</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+<div class="an-grid">
+<section aria-label="Your photo">
+<div class="seg" role="group" aria-label="Photo source" style="color: #191919">
+<button type="button" data-source="upload" aria-pressed="true"><span>Upload photo</span></button>
+<button type="button" data-source="camera" aria-pressed="false"><span>Use camera</span></button>
+</div>
+
+<div style="margin-top: 20px">
+<div id="uploadPanel">
+<label class="drop" id="dropZone" for="fileInput">
+<span class="crop" style="top: 16px; left: 16px; border-top-width: 2px; border-left-width: 2px"></span>
+<span class="crop" style="top: 16px; right: 16px; border-top-width: 2px; border-right-width: 2px"></span>
+<span class="crop" style="bottom: 16px; left: 16px; border-bottom-width: 2px; border-left-width: 2px"></span>
+<span class="crop" style="bottom: 16px; right: 16px; border-bottom-width: 2px; border-right-width: 2px"></span>
+<span style="max-width: 16em">Drop a photo here, or choose one</span>
+<span class="btn btn-line">Choose photo</span>
+</label>
+<input type="file" id="fileInput" accept="image/*" class="hidden">
+<div class="preview hidden" id="preview">
+<img id="previewImg" alt="Your photo">
+<div class="preview-row"><button type="button" class="btn btn-line" id="changePhoto" style="min-height: 40px; font-size: 15px; padding: 0 14px">Change photo</button></div>
+</div>
+</div>
+
+<div id="cameraPanel" class="hidden">
+<div class="panel-camera">
+<video id="video" autoplay playsinline muted class="hidden"></video>
+<span class="crop" style="top: 16px; left: 16px; border-top-width: 2px; border-left-width: 2px"></span>
+<span class="crop" style="top: 16px; right: 16px; border-top-width: 2px; border-right-width: 2px"></span>
+<span class="crop" style="bottom: 16px; left: 16px; border-bottom-width: 2px; border-left-width: 2px"></span>
+<span class="crop" style="bottom: 16px; right: 16px; border-bottom-width: 2px; border-right-width: 2px"></span>
+<div id="cameraIntro" style="display: flex; flex-direction: column; align-items: center; gap: 16px; position: relative">
+<p style="margin: 0; max-width: 16em">Hold the camera about 10 cm from the skin and fill the corners.</p>
+<button type="button" class="btn btn-light" id="startCamera">Start camera</button>
+</div>
+<div class="cam-actions hidden" id="cameraActions">
+<button type="button" class="btn btn-light" id="takePhoto">Take photo</button>
+<button type="button" class="btn btn-line" id="switchCamera" style="color: #FFFFFF !important; box-shadow: inset 0 0 0 1px #FFFFFF">Switch camera</button>
+</div>
+</div>
+<canvas id="canvas" class="hidden"></canvas>
+</div>
+</div>
+
+<button type="button" class="btn" id="analyseBtn" style="width: 100%; margin-top: 20px; min-height: 56px; font-size: 18px" disabled>Analyse photo</button>
+<p class="form-error hidden" id="inputError" role="alert" style="margin-top: 12px"></p>
+
+<h2 style="font-size: 17px; font-weight: 600; font-stretch: 100%; letter-spacing: 0; margin: 40px 0 6px">For a useful result</h2>
+<ul class="list small">
+<li>Fill most of the frame with the affected skin</li>
+<li>Avoid shadows, glare, filters and zoom</li>
+<li>Keep backgrounds plain: the model can notice them</li>
+</ul>
 </section>
 
-<!-- Main Analyzer Section -->
-<section class="analyzer-main section-padding">
-    <div class="container">
-        <div class="analyzer-grid">
-            <!-- Left Column: Image Upload -->
-            <div class="analyzer-column">
-                <div class="analyzer-card">
-                    <div class="card-header">
-                        <i class="fas fa-file-image"></i>
-                        <h3>Image Analysis</h3>
-                    </div>
-                    
-                    <div class="card-body">
-                        <div class="upload-area" id="uploadArea">
-                            <i class="fas fa-cloud-upload-alt"></i>
-                            <h4>Upload Dermatological Image</h4>
-                            <p>Drag & drop or click to browse</p>
-                            <input type="file" id="fileInput" accept="image/*" hidden>
-                            <button class="btn btn-outline" id="browseBtn">
-                                <i class="fas fa-folder-open"></i> Browse Files
-                            </button>
-                            <p class="file-hint">JPG, PNG, WEBP | Max 10MB</p>
-                        </div>
-                        
-                        <!-- File Preview -->
-                        <div id="filePreview" class="file-preview" style="display: none;">
-                            <div class="preview-header">
-                                <h4>Image Preview</h4>
-                                <button class="btn-small" id="clearPreview">
-                                    <i class="fas fa-times"></i> Clear
-                                </button>
-                            </div>
-                            <img id="previewImage" src="" alt="Image preview">
-                            <p class="preview-info">Ready for analysis</p>
-                        </div>
-                        
-                        <!-- Analysis Button -->
-                        <div class="analyze-action">
-                            <button id="btnPredictUpload" class="btn btn-primary btn-block">
-                                <i class="fas fa-search"></i> Analyse Image
-                            </button>
-                        </div>
-                        
-                        <!-- Upload Results -->
-                        <div id="uploadResult" class="result-card">
-                            <!-- Results will appear here -->
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="info-card">
-                    <h4><i class="fas fa-lightbulb"></i> Tips for Best Results</h4>
-                    <ul>
-                        <li>Use clear, well-lit images</li>
-                        <li>Focus on the affected area</li>
-                        <li>Avoid shadows and glare</li>
-                        <li>Include some surrounding skin for context</li>
-                        <li>Capture from multiple angles if possible</li>
-                    </ul>
-                </div>
-            </div>
-            
-            <!-- Right Column: Camera Analysis -->
-            <div class="analyzer-column">
-                <div class="analyzer-card">
-                    <div class="card-header">
-                        <i class="fas fa-video"></i>
-                        <h3>Live Camera Analysis</h3>
-                    </div>
-                    
-                    <div class="card-body">
-                        <!-- Camera Switch -->
-                        <div class="camera-switch-container">
-                            <button id="btnSwitchCamera" class="camera-switch-btn" title="Switch between front and back camera">
-                                <i class="fas fa-sync-alt"></i>
-                            </button>
-                            <span id="cameraLabel">Front Camera</span>
-                        </div>
-                        
-                        <!-- Video Container -->
-                        <div class="video-container">
-                            <video id="video" autoplay playsinline></video>
-                            <div class="video-overlay">
-                                <div class="focus-frame"></div>
-                                <div class="recording-indicator" id="recordingIndicator">
-                                    <div class="pulse"></div>
-                                    <span>Live Analysis Active</span>
-                                </div>
-                            </div>
-                            <canvas id="canvas" style="display:none;"></canvas>
-                        </div>
-                        
-                        <!-- Camera Controls -->
-                        <div class="camera-controls">
-                            <button id="btnStart" class="btn btn-success">
-                                <i class="fas fa-play"></i> Start Camera
-                            </button>
-                            <button id="btnStop" disabled class="btn btn-danger">
-                                <i class="fas fa-stop"></i> Stop Camera
-                            </button>
-                            <button id="btnLive" disabled class="btn btn-warning">
-                                <i class="fas fa-broadcast-tower"></i> Start Live Analysis
-                            </button>
-                            <button id="btnExplainFrame" disabled class="btn btn-outline" title="Analyse the current frame and show which regions drove the prediction">
-                                <i class="fas fa-eye"></i> Explain Frame
-                            </button>
-                        </div>
-                        
-                        <!-- Live Results -->
-                        <div id="camResult" class="result-card">
-                            <!-- Results will appear here -->
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="info-card warning-card">
-                    <h4><i class="fas fa-exclamation-triangle"></i> Important Notice</h4>
-                    <p>This tool provides preliminary analysis for educational and research purposes only. It is not a substitute for professional medical diagnosis. Always consult a qualified dermatologist for medical concerns.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
+<section aria-label="Result" aria-live="polite" id="resultArea">
+<div class="result-grid">
+<figure class="plate" style="margin: 0; color: #191919" data-heat-scope>
+<div class="plate-grid">
+<span aria-hidden="true"></span>
+{% include "partials/ruler_top.html" %}
+{% include "partials/ruler_left.html" %}
+<div id="plateBox">
+<div class="empty-plate" id="emptyPlate"><p style="margin: 0; max-width: 16em">Your photo and its heatmap appear here.</p></div>
+<div class="plate-img hidden" id="resultPlate" data-heat-target>
+<img id="resultPhoto" alt="The analysed centre of your photo">
+<img class="heat" id="resultHeat" alt="">
+</div>
+</div>
+</div>
+<div class="controls hidden" id="heatControls">{% include "partials/heat_toggle.html" %}</div>
+<div class="hidden" id="heatLegend">{% include "partials/legend.html" %}</div>
+</figure>
 
-<!-- How to Use Section -->
-<section class="instructions section-padding">
-    <div class="container">
-        <div class="section-header">
-            <h2>How to Use the Analyser</h2>
-            <p class="section-subtitle">Follow these steps for optimal results</p>
-        </div>
-    </br>
-        
-        <div class="instructions-grid">
-            <div class="instruction-step">
-                <div class="step-number">1</div>
-                <h3>Choose Your Method</h3>
-                <p>Select between image upload for existing photos or live camera analysis for real-time assessment.</p>
-            </div>
-            
-            <div class="instruction-step">
-                <div class="step-number">2</div>
-                <h3>Capture/Upload Image</h3>
-                <p>For camera analysis, position the lesion in the center frame. For upload, select a clear, well-lit image.</p>
-            </div>
-            
-            <div class="instruction-step">
-                <div class="step-number">3</div>
-                <h3>Start Analysis</h3>
-                <p>Click "Analyse Image" or "Start Live Analysis" to begin AI processing.</p>
-            </div>
-            
-            <div class="instruction-step">
-                <div class="step-number">4</div>
-                <h3>Review Results</h3>
-                <p>Examine the top predictions with confidence scores, then use the Grad-CAM heatmap and faithfulness check to see which skin regions drove the result.</p>
-            </div>
-        </div>
-    </div>
+<div id="resultSummary" class="hidden">
+<p class="muted" style="margin: 0 0 6px">Most likely</p>
+<h2 id="topLabel" style="font-size: 34px; line-height: 1.1"></h2>
+<p id="topConf" style="font-stretch: 112%; font-weight: 300; font-size: 56px; line-height: 1; margin: 14px 0 28px; letter-spacing: -0.02em"></p>
+<h3 style="font-size: 17px; font-weight: 600; margin-bottom: 4px">Differential</h3>
+<ul class="diff" id="differential"></ul>
+</div>
+
+<div id="resultNotice" class="notice hidden"><h3 id="noticeTitle"></h3><p id="noticeText"></p></div>
+</div>
+
+<div id="coverTest" class="hidden" style="margin-top: 56px; padding-top: 40px; border-top: 1px solid #191919; max-width: 520px">
+<div id="coverBox">
+<h3 id="coverTitle" style="margin-bottom: 8px"></h3>
+<p class="small muted" id="coverText" style="margin: 0"></p>
+<table class="cover" style="margin-top: 18px">
+<tbody>
+<tr><th scope="row">Nothing hidden</th><td id="c0"></td></tr>
+<tr><th scope="row">Marked fifth hidden</th><td id="c1"></td></tr>
+<tr><th scope="row">Random fifth hidden</th><td id="c2"></td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<p class="urgent" style="font-size: 16px">This is not a diagnosis. If a mark is new, changing, bleeding or painful, see a GP or pharmacist. Call 999 for a rash that spreads fast with a fever.</p>
 </section>
-</br>
+</div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
-<!-- analyzer JavaScript -->
-<script src="{% static 'js/analyzer.js' %}"></script>
-
-<script>
-    // Additional analyzer page functionality
-    document.addEventListener('DOMContentLoaded', function() {
-        // File upload area interaction
-        const uploadArea = document.getElementById('uploadArea');
-        const browseBtn = document.getElementById('browseBtn');
-        const fileInput = document.getElementById('fileInput');
-        const clearPreview = document.getElementById('clearPreview');
-        
-        if (browseBtn && fileInput) {
-            browseBtn.addEventListener('click', () => fileInput.click());
-        }
-        
-        if (uploadArea && fileInput) {
-            uploadArea.addEventListener('click', () => fileInput.click());
-            
-            uploadArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                uploadArea.style.borderColor = 'var(--primary-color)';
-                uploadArea.style.backgroundColor = 'var(--primary-light)';
-            });
-            
-            uploadArea.addEventListener('dragleave', () => {
-                uploadArea.style.borderColor = 'var(--gray-300)';
-                uploadArea.style.backgroundColor = 'var(--gray-50)';
-            });
-            
-            uploadArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                uploadArea.style.borderColor = 'var(--gray-300)';
-                uploadArea.style.backgroundColor = 'var(--gray-50)';
-                
-                if (e.dataTransfer.files.length) {
-                    fileInput.files = e.dataTransfer.files;
-                    // Trigger change event
-                    const event = new Event('change', { bubbles: true });
-                    fileInput.dispatchEvent(event);
-                }
-            });
-        }
-        
-        if (clearPreview) {
-            clearPreview.addEventListener('click', () => {
-                const filePreview = document.getElementById('filePreview');
-                const previewImage = document.getElementById('previewImage');
-                filePreview.style.display = 'none';
-                previewImage.src = '';
-                fileInput.value = '';
-            });
-        }
-        
-        // Update camera label based on current camera
-        function updateCameraLabel() {
-            const cameraLabel = document.getElementById('cameraLabel');
-            if (window.app && window.app.cameraManager) {
-                cameraLabel.textContent = window.app.cameraManager.getCurrentCameraLabel();
-            }
-        }
-        
-        // Monitor camera changes
-        setInterval(updateCameraLabel, 1000);
-    });
-</script>
+{% load static %}
+<script src="{% static 'js/analyzer.js' %}" defer></script>
 {% endblock %}

@@ -1,0 +1,11 @@
+<div class="plate-grid">
+<span aria-hidden="true"></span>
+{% include "partials/ruler_top.html" %}
+{% include "partials/ruler_left.html" %}
+<div class="plate-img" data-heat-target>
+<img src="{{ photo }}" alt="{{ alt }}" width="960" height="960" loading="{{ loading|default:'lazy' }}" decoding="async">
+<img class="heat" src="{{ heat }}" alt="" width="960" height="960" loading="{{ loading|default:'lazy' }}" decoding="async">
+{% if ax %}<div class="pin" style="left: {{ ax }}%; top: {{ ay }}%"><span>A</span></div>{% endif %}
+{% if bx %}<div class="pin" style="left: {{ bx }}%; top: {{ by }}%"><span>B</span></div>{% endif %}
+</div>
+</div>
