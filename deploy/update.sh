@@ -8,6 +8,7 @@ APP=/var/www/myhealthpredicta
 REPO=toppylawz/humandiseaserecognition
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
+chmod 755 "$TMP"
 
 curl -fsSL "https://codeload.github.com/$REPO/tar.gz/$REF" | tar -xz -C "$TMP" --strip-components=1
 
@@ -25,5 +26,6 @@ cd "$APP"
 set -a; source /etc/myhealthpredicta.env; set +a
 DJANGO_SETTINGS_MODULE=myowndissertation.settings_production .venv/bin/python manage.py collectstatic --noinput
 chown -R myhealthpredicta:www-data "$APP"
+chmod 755 "$APP"
 systemctl restart myhealthpredicta
 systemctl --no-pager --lines=5 status myhealthpredicta
