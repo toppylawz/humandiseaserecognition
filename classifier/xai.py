@@ -19,6 +19,9 @@ Faithfulness check (in the spirit of Petsiuk et al., 2018, RISE):
     equally sized random region. A map that really reflects what the model
     uses should cause a much larger drop than random.
 
+The analyser page shows a combined map: Grad-CAM sharpened by the occlusion
+map whenever covering a single patch clearly lowers the class probability.
+
 Preprocessing uses the Ultralytics classification transform itself, so the
 explanation is computed on exactly the pixels the model classifies.
 """
@@ -230,7 +233,7 @@ class YoloClsExplainer:
     def top_mask(heatmap: np.ndarray, fraction: float) -> np.ndarray:
         k = max(1, int(round(fraction * heatmap.size)))
         thr = np.partition(heatmap.ravel(), -k)[-k]
-        return heatmap >= thr
+        return (heatmap >= thr) & (heatmap > 0)
 
     def faithfulness(self, rgb: np.ndarray, heatmap: np.ndarray, class_index: int,
                      fraction: float = 0.2, n_random: int = 3, seed: int = 0) -> Dict[str, float]:
@@ -286,6 +289,25 @@ class YoloClsExplainer:
             heat[y:y + patch, x:x + patch] += (p0 - p); cnt[y:y + patch, x:x + patch] += 1
         return heat / np.maximum(cnt, 1)
 
+    def influence_map(self, x: torch.Tensor, rgb: np.ndarray, class_index: int) -> np.ndarray:
+        """Grad-CAM sharpened by occlusion, normalised to [0, 1].
+
+        The occlusion map only counts as far as covering a single patch really
+        lowers the class probability: `weight` rises from 0 (largest drop under
+        10% of the original probability, Grad-CAM alone) to 1 (40% or more,
+        geometric mean of the two maps).
+        """
+        cam = self.cams(x, class_index=class_index)["gradcam"]
+        p0 = float(self.predict_tensor(x)[0, class_index])
+        drop = np.maximum(self.occlusion(rgb, class_index), 0)
+        weight = float(np.clip((drop.max() / max(p0, 1e-6) - 0.1) / 0.3, 0, 1))
+        if weight == 0:
+            return cam
+        t = torch.from_numpy(drop)[None, None]
+        drop = _normalise_map(F.avg_pool2d(F.pad(t, (12, 12, 12, 12), mode="replicate"), 25, stride=1)[0, 0].numpy())
+        fused = _normalise_map(cam ** (1 - weight / 2) * drop ** (weight / 2))
+        return fused if float(fused.max()) > 0 else cam
+
     @staticmethod
     def rank_agreement(a: np.ndarray, b: np.ndarray, size: int = 28) -> float:
         """Spearman rank correlation between two maps (pooled to size x size)."""
@@ -323,22 +345,26 @@ class YoloClsExplainer:
         return (np.dstack([rgb, alpha]) * 255).round().astype(np.uint8)
 
     @staticmethod
-    def peaks(heatmap: np.ndarray, k: int = 2, min_gap: float = 0.22, margin: float = 0.08) -> List[List[float]]:
-        """Up to k separated hotspots as [x%, y%], ignoring the outer margin."""
+    def peaks(heatmap: np.ndarray, k: int = 2, min_gap: float = 0.25, second_min: float = 0.6) -> List[List[float]]:
+        """Up to k separated hotspots as [x%, y%], strongest first.
+
+        A further hotspot is kept only when it reaches `second_min` of the strongest.
+        """
         S = heatmap.shape[0]
         t = torch.from_numpy(heatmap.astype(np.float32))[None, None]
-        smooth = F.avg_pool2d(t, 15, stride=1, padding=7)
+        smooth = F.avg_pool2d(F.pad(t, (7, 7, 7, 7), mode="replicate"), 15, stride=1)
         local = F.max_pool2d(smooth, 61, stride=1, padding=30)
         hs = smooth[0, 0].numpy()
-        is_peak = (smooth == local)[0, 0].numpy() & (hs > 0.35 * hs.max())
-        ys, xs = np.nonzero(is_peak)
+        top = float(hs.max())
+        if top <= 0:
+            return []
+        ys, xs = np.nonzero((smooth == local)[0, 0].numpy() & (hs >= second_min * top))
         out: List[List[float]] = []
         for i in np.argsort(-hs[ys, xs]):
-            x, y = xs[i] / S, ys[i] / S
-            if min(x, y, 1 - x, 1 - y) < margin:
-                continue
+            x = float(np.clip((xs[i] + 0.5) / S, 0.04, 0.96))
+            y = float(np.clip((ys[i] + 0.5) / S, 0.04, 0.96))
             if all(np.hypot(x - a / 100, y - b / 100) > min_gap for a, b in out):
-                out.append([round(float(x) * 100, 1), round(float(y) * 100, 1)])
+                out.append([round(x * 100, 1), round(y * 100, 1)])
             if len(out) == k:
                 break
         return out
@@ -356,9 +382,10 @@ class YoloClsExplainer:
                         with_faithfulness: bool = True) -> Dict[str, object]:
         """Compact JSON-serialisable explanation for the analyser page."""
         x, rgb = self.preprocess(pil_img)
-        r = self.cams(x, class_index=class_index)
-        c = r["class_index"]
-        cam = r["gradcam"]
+        if class_index is None:
+            class_index = int(np.argmax(self.predict_tensor(x)[0]))
+        c = int(class_index)
+        cam = self.influence_map(x, rgb, c)
 
         photo = np.asarray(self.photo_crop(pil_img))
         payload = {

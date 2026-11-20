@@ -80,6 +80,7 @@
 </div>
 <div class="controls hidden" id="heatControls">{% include "partials/heat_toggle.html" %}</div>
 <div class="hidden" id="heatLegend">{% include "partials/legend.html" %}</div>
+<p class="small muted hidden" id="heatNote" style="margin: 14px 0 0"></p>
 <div class="trust-line hidden" id="trustLine">
 <p><span class="trust-mark" id="trustMark" aria-hidden="true"></span><span><strong id="trustTitle"></strong> <span id="trustText"></span></span></p>
 <details class="trust-more">
@@ -95,10 +96,11 @@
 </figure>
 
 <div id="resultSummary" class="hidden">
-<p class="muted" style="margin: 0 0 6px">Most likely</p>
+<p class="muted" id="resultKicker" style="margin: 0 0 6px"></p>
 <h2 id="topLabel" style="font-size: 34px; line-height: 1.1"></h2>
 <p id="topConf" style="font-stretch: 112%; font-weight: 300; font-size: 56px; line-height: 1; margin: 14px 0 28px; letter-spacing: -0.02em"></p>
-<h3 style="font-size: 17px; font-weight: 600; margin-bottom: 4px">Differential</h3>
+<p id="resultHint" class="hidden" style="margin: 14px 0 28px; max-width: 24em"></p>
+<h3 id="listTitle" style="font-size: 17px; font-weight: 600; margin-bottom: 4px"></h3>
 <ul class="diff" id="differential"></ul>
 </div>
 

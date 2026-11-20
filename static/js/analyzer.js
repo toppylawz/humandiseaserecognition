@@ -40,6 +40,8 @@ function displayName(label) {
   return CLASS_DISPLAY_NAMES[label] || label;
 }
 
+const CLEAR_MATCH = 0.5;
+
 function pct(value) {
   const p = value * 100;
   return p < 1 ? 'under 1%' : Math.round(p) + '%';
@@ -165,7 +167,7 @@ function pct(value) {
   document.querySelectorAll('[data-source]').forEach((b) => b.addEventListener('click', () => selectSource(b.dataset.source)));
 
   function resetResult() {
-    ['resultPlate', 'heatControls', 'heatLegend', 'resultSummary', 'resultNotice', 'trustLine'].forEach((id) => $(id).classList.add('hidden'));
+    ['resultPlate', 'heatControls', 'heatLegend', 'heatNote', 'resultSummary', 'resultNotice', 'trustLine'].forEach((id) => $(id).classList.add('hidden'));
     $('emptyPlate').classList.remove('hidden');
     $('resultPlate').querySelectorAll('.pin').forEach((p) => p.remove());
     $('resultPlate').classList.remove('heat-off');
@@ -190,11 +192,17 @@ function pct(value) {
     }
 
     const top = data.top1;
-    $('topLabel').textContent = displayName(top.label);
+    const clear = top.confidence >= CLEAR_MATCH;
+    $('resultKicker').textContent = clear ? 'Most likely' : 'Result';
+    $('topLabel').textContent = clear ? displayName(top.label) : 'No clear match';
     $('topConf').textContent = pct(top.confidence);
+    $('topConf').classList.toggle('hidden', !clear);
+    $('resultHint').textContent = clear ? '' : 'The model is not sure what this photo shows. Try a closer, sharper photo of the affected skin in daylight.';
+    $('resultHint').classList.toggle('hidden', clear);
+    $('listTitle').textContent = clear ? 'Other possibilities' : 'Possibilities';
     const list = $('differential');
     list.innerHTML = '';
-    (data.top5 || []).slice(1, 5).forEach((item) => {
+    (data.top5 || []).slice(clear ? 1 : 0, 5).forEach((item) => {
       const li = document.createElement('li');
       const name = document.createElement('span');
       name.textContent = displayName(item.label);
@@ -214,7 +222,7 @@ function pct(value) {
     $('resultPhoto').src = xai.images.photo;
     $('resultHeat').src = xai.images.heat;
     const plate = $('resultPlate');
-    (xai.pins || []).forEach(([x, y], i) => {
+    (clear ? xai.pins || [] : []).forEach(([x, y], i) => {
       const pin = document.createElement('div');
       pin.className = 'pin';
       pin.style.left = x + '%';
@@ -228,14 +236,18 @@ function pct(value) {
     plate.classList.remove('hidden');
     $('heatControls').classList.remove('hidden');
     $('heatLegend').classList.remove('hidden');
+    if (!clear) {
+      $('heatNote').textContent = 'The heatmap shows what influenced the first possibility, ' + displayName(top.label).toLowerCase() + '.';
+      $('heatNote').classList.remove('hidden');
+    }
 
     const f = xai.faithfulness;
     const healthy = top.label === 'Heathy' || top.label === 'Healthy';
-    if (f && !healthy) {
+    if (f && clear && !healthy) {
       const copy = {
         strong: ['\u2714', 'The model really used the highlighted area.', 'Covering it made the model much less sure.'],
         moderate: ['~', 'The highlighted area mattered, but so did the rest of the photo.', ''],
-        weak: ['!', 'The model may have used something other than the highlighted area,', 'such as the background. Treat this result with extra caution.']
+        weak: ['!', 'The highlighted area does not explain this answer well.', 'The model also relied on other parts of the photo. Treat this result with extra caution.']
       }[f.verdict];
       if (copy) {
         const mark = $('trustMark');
