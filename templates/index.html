@@ -3,10 +3,10 @@
 {% block title %}Dermopsis: an atlas of what the model sees{% endblock %}
 
 {% block content %}
-{% static 'images/plates/leg.jpg' as leg %}{% static 'images/plates/leg_heat.webp' as leg_heat %}
-{% static 'images/plates/wrist.jpg' as wrist %}{% static 'images/plates/wrist_heat.webp' as wrist_heat %}
-{% static 'images/plates/watch.jpg' as watch %}{% static 'images/plates/watch_heat.webp' as watch_heat %}
+{% static 'images/plates/hand.jpg' as hand %}{% static 'images/plates/hand_heat.webp' as hand_heat %}
+{% static 'images/plates/knee.jpg' as knee %}{% static 'images/plates/knee_heat.webp' as knee_heat %}
 {% static 'images/plates/forearm.jpg' as forearm %}{% static 'images/plates/forearm_heat.webp' as forearm_heat %}
+{% static 'images/plates/legs.jpg' as legs %}{% static 'images/plates/legs_heat.webp' as legs_heat %}
 
 <section class="studio" aria-labelledby="h1">
 <div class="wrap hero">
@@ -19,11 +19,11 @@
 </div>
 </div>
 <figure class="plate" style="color: #FFFFFF; margin: 0" data-heat-scope>
-{% include "partials/plate.html" with photo=leg heat=leg_heat alt="Lower leg with a red, bumpy rash" ax="20.1" ay="52.2" bx="76.8" by="63.8" loading="eager" %}
+{% include "partials/plate.html" with photo=hand heat=hand_heat alt="Back of a hand and wrist with a red, raised rash" ax="61.2" ay="61.6" bx="23.7" by="36.2" loading="eager" %}
 <div class="controls">{% include "partials/heat_toggle.html" %}</div>
 <div class="legend" aria-hidden="true" style="color: #E9E9E5"><span>Little influence</span><i></i><span>Most influence</span></div>
 <figcaption style="margin-top: 18px; max-width: 36em">
-<p class="answer"><strong>The model's answer: contact dermatitis, 28% sure.</strong></p>
+<p class="answer"><strong>The model's answer: contact dermatitis, 77% sure.</strong></p>
 <div class="trust-line" style="margin-top: 12px"><p><span class="trust-mark strong" aria-hidden="true">&#10004;</span><span><strong>The model really used the highlighted area.</strong> Covering it made the model much less sure.</span></p></div>
 </figcaption>
 </figure>
@@ -49,16 +49,16 @@
 </div>
 <div class="plates">
 <figure class="plate">
-{% include "partials/plate.html" with photo=wrist heat=wrist_heat alt="Inner wrist with a red, raised rash" ax="36.2" ay="48.7" %}
-<figcaption class="answer" style="margin-top: 14px">The model's answer: <strong>contact dermatitis</strong>, 74% sure</figcaption>
+{% include "partials/plate.html" with photo=knee heat=knee_heat alt="Raised pale welts on a knee" ax="62.9" ay="37.5" %}
+<figcaption class="answer" style="margin-top: 14px">The model's answer: <strong>hives (urticaria)</strong>, 92% sure</figcaption>
 </figure>
 <figure class="plate">
-{% include "partials/plate.html" with photo=watch heat=watch_heat alt="Back of a wrist beside a watch strap, with small dark scabs" ax="50.0" ay="76.3" %}
-<figcaption class="answer" style="margin-top: 14px">The model's answer: <strong>eczema</strong>, 44% sure</figcaption>
+{% include "partials/plate.html" with photo=forearm heat=forearm_heat alt="Forearm with a red, scaly rash" ax="49.6" ay="64.7" %}
+<figcaption class="answer" style="margin-top: 14px">The model's answer: <strong>eczema</strong>, 94% sure</figcaption>
 </figure>
 <figure class="plate">
-{% include "partials/plate.html" with photo=forearm heat=forearm_heat alt="Forearm with small crusted sores" ax="47.8" ay="50.0" bx="60.7" by="20.1" %}
-<figcaption class="answer" style="margin-top: 14px">The model's answer: <strong>bacterial skin infection</strong>, 25% sure</figcaption>
+{% include "partials/plate.html" with photo=legs heat=legs_heat alt="Lower legs with small red-brown spots" ax="34.4" ay="47.3" bx="63.4" by="48.7" %}
+<figcaption class="answer" style="margin-top: 14px">The model's answer: <strong>vasculitis</strong>, 97% sure</figcaption>
 </figure>
 </div>
 </div>
@@ -67,15 +67,29 @@
 <section class="section" id="accuracy" aria-labelledby="acc-h">
 <div class="wrap">
 <div class="section-head"><h2 id="acc-h">How often it is right</h2></div>
-<div class="acc">
+<div class="acc acc-4">
 <div>
+<p class="figno" style="margin: 0 0 10px">Clinical photos</p>
 <p class="big" style="margin: 0">6 in 10</p>
 <div class="tally blue" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></div>
 <p class="small" style="margin: 0">First answer correct.</p>
 </div>
 <div>
+<p class="figno" style="margin: 0 0 10px">&nbsp;</p>
 <p class="big" style="margin: 0">9 in 10</p>
 <div class="tally" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+<p class="small" style="margin: 0">Right answer within its top five.</p>
+</div>
+<div>
+<p class="figno" style="margin: 0 0 10px">Phone photos</p>
+<p class="big" style="margin: 0">4 in 10</p>
+<div class="tally blue" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+<p class="small" style="margin: 0">First answer correct.</p>
+</div>
+<div>
+<p class="figno" style="margin: 0 0 10px">&nbsp;</p>
+<p class="big" style="margin: 0">8 in 10</p>
+<div class="tally" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div>
 <p class="small" style="margin: 0">Right answer within its top five.</p>
 </div>
 </div>
