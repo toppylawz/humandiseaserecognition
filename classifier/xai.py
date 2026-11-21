@@ -39,6 +39,8 @@ import torch.nn.functional as F
 from PIL import Image, ImageFilter
 from ultralytics.data.augment import classify_transforms
 
+from .calibration import calibrated
+
 try:  # matplotlib ships with ultralytics; fall back to a built-in ramp if absent
     from matplotlib import colormaps as _mpl_colormaps
 except Exception:  # pragma: no cover
@@ -255,13 +257,18 @@ class YoloClsExplainer:
             rm = np.kron(rm, np.ones((cell, cell), bool))[:S, :S]
             r = rgb.copy(); r[rm] = base[rm]; imgs.append(r)
 
-        p = self.predict_arrays(np.stack(imgs))[:, class_index]
+        full = self.predict_arrays(np.stack(imgs))
+        p = full[:, class_index]
+        shown = calibrated(full)[:, class_index]
         p0, p_removed, p_kept = float(p[0]), float(p[1]), float(p[2])
         p_random = float(np.mean(p[3:]))
         drop = p0 - p_removed
         rand_drop = p0 - p_random
         return {
             "fraction_hidden": float(fraction),
+            "shown_original": float(shown[0]),
+            "shown_highlight_hidden": float(shown[1]),
+            "shown_random_hidden": float(np.mean(shown[3:])),
             "confidence_original": p0,
             "confidence_highlight_hidden": p_removed,
             "confidence_only_highlight": p_kept,

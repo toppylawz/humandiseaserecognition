@@ -3,6 +3,8 @@ import numpy as np
 from PIL import Image
 from ultralytics import YOLO
 
+from .calibration import calibrated
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Model paths
@@ -104,16 +106,18 @@ def disease_predict(pil_img: Image.Image, topk: int = 5):
     names = DISEASE_CLASSES if (DISEASE_CLASSES and len(DISEASE_CLASSES) == num_classes) else [f"class_{i}" for i in range(num_classes)]
 
     top1_idx = int(r.probs.top1)
-    top1_conf = float(getattr(r.probs, "top1conf", probs[top1_idx]))
+    raw_conf = float(probs[top1_idx])
     ent = _softmax_entropy(probs)
+    shown = calibrated(probs)
 
     k = int(max(1, min(int(topk), num_classes)))
     topk_idx = np.argsort(-probs)[:k]
-    top5 = [{"label": names[int(i)], "confidence": float(probs[int(i)])} for i in topk_idx]
+    top5 = [{"label": names[int(i)], "confidence": float(shown[int(i)])} for i in topk_idx]
 
     return {
-        "top1": {"label": names[top1_idx], "confidence": top1_conf},
+        "top1": {"label": names[top1_idx], "confidence": float(shown[top1_idx])},
         "top5": top5,
+        "raw_confidence": raw_conf,
         "entropy": float(ent),
     }
 
@@ -157,7 +161,7 @@ def predict_pil_image(pil_img: Image.Image,
 
         # If gate uncertain, apply stricter acceptance
         if status == "uncertain":
-            top1_conf = float(d["top1"]["confidence"])
+            top1_conf = float(d["raw_confidence"])
             ent = float(d["entropy"])
 
             if (top1_conf < disease_min_conf_if_uncertain) or (ent > disease_entropy_max_if_uncertain):

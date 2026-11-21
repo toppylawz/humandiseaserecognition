@@ -40,7 +40,7 @@ function displayName(label) {
   return CLASS_DISPLAY_NAMES[label] || label;
 }
 
-const CLEAR_MATCH = 0.5;
+const CLEAR_MATCH = 0.4;
 
 function pct(value) {
   const p = value * 100;
@@ -256,7 +256,7 @@ function pct(value) {
         $('trustTitle').textContent = copy[1];
         $('trustText').textContent = copy[2];
         $('coverLabel').textContent = displayName(top.label).toLowerCase();
-        [f.confidence_original, f.confidence_highlight_hidden, f.confidence_random_hidden].forEach((v, i) => {
+        [f.shown_original, f.shown_highlight_hidden, f.shown_random_hidden].forEach((v, i) => {
           $('c' + i).textContent = pct(v);
           $('b' + i).style.width = Math.max(0, Math.min(100, v * 100)).toFixed(1) + '%';
         });
