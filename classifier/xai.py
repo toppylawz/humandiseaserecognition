@@ -279,6 +279,19 @@ class YoloClsExplainer:
             "faithfulness_ratio": float(drop / rand_drop) if rand_drop > 1e-3 else None,
         }
 
+    @staticmethod
+    def verdict(f: Dict[str, float]) -> str:
+        """Grade a faithfulness result as strong, moderate or weak."""
+        p0 = f["confidence_original"]
+        covered = f["confidence_highlight_hidden"]
+        others = f["confidence_random_hidden"]
+        relative_drop = (p0 - covered) / p0 if p0 > 0 else 0.0
+        if relative_drop >= 0.5 and others - covered >= 0.25 * p0:
+            return "strong"
+        if relative_drop >= 0.25 and others > covered:
+            return "moderate"
+        return "weak"
+
     def occlusion(self, rgb: np.ndarray, class_index: int, patch: int = 48, stride: int = 24) -> np.ndarray:
         """Occlusion sensitivity map (probability drop when each region is blurred), unnormalised."""
         S = rgb.shape[0]
@@ -296,24 +309,31 @@ class YoloClsExplainer:
             heat[y:y + patch, x:x + patch] += (p0 - p); cnt[y:y + patch, x:x + patch] += 1
         return heat / np.maximum(cnt, 1)
 
-    def influence_map(self, x: torch.Tensor, rgb: np.ndarray, class_index: int) -> np.ndarray:
-        """Grad-CAM sharpened by occlusion, normalised to [0, 1].
+    @staticmethod
+    def combine_maps(cam: np.ndarray, drop: np.ndarray, p0: float):
+        """Sharpen a Grad-CAM map with an occlusion map. Returns (map, weight).
 
         The occlusion map only counts as far as covering a single patch really
         lowers the class probability: `weight` rises from 0 (largest drop under
         10% of the original probability, Grad-CAM alone) to 1 (40% or more,
         geometric mean of the two maps).
         """
-        cam = self.cams(x, class_index=class_index)["gradcam"]
-        p0 = float(self.predict_tensor(x)[0, class_index])
-        drop = np.maximum(self.occlusion(rgb, class_index), 0)
+        drop = np.maximum(drop, 0)
         weight = float(np.clip((drop.max() / max(p0, 1e-6) - 0.1) / 0.3, 0, 1))
         if weight == 0:
-            return cam
+            return cam, 0.0
         t = torch.from_numpy(drop)[None, None]
         drop = _normalise_map(F.avg_pool2d(F.pad(t, (12, 12, 12, 12), mode="replicate"), 25, stride=1)[0, 0].numpy())
         fused = _normalise_map(cam ** (1 - weight / 2) * drop ** (weight / 2))
-        return fused if float(fused.max()) > 0 else cam
+        if float(fused.max()) <= 0:
+            return cam, 0.0
+        return fused, weight
+
+    def influence_map(self, x: torch.Tensor, rgb: np.ndarray, class_index: int) -> np.ndarray:
+        """The map shown on the analyser page: Grad-CAM sharpened by occlusion, in [0, 1]."""
+        cam = self.cams(x, class_index=class_index)["gradcam"]
+        p0 = float(self.predict_tensor(x)[0, class_index])
+        return self.combine_maps(cam, self.occlusion(rgb, class_index), p0)[0]
 
     @staticmethod
     def rank_agreement(a: np.ndarray, b: np.ndarray, size: int = 28) -> float:
@@ -405,16 +425,6 @@ class YoloClsExplainer:
         }
         if with_faithfulness:
             f = self.faithfulness(rgb, cam, c, fraction=0.2)
-            p0 = f["confidence_original"]
-            covered = f["confidence_highlight_hidden"]
-            others = f["confidence_random_hidden"]
-            relative_drop = (p0 - covered) / p0 if p0 > 0 else 0.0
-            if relative_drop >= 0.5 and others - covered >= 0.25 * p0:
-                verdict = "strong"
-            elif relative_drop >= 0.25 and others > covered:
-                verdict = "moderate"
-            else:
-                verdict = "weak"
-            f["verdict"] = verdict
+            f["verdict"] = self.verdict(f)
             payload["faithfulness"] = f
         return payload
