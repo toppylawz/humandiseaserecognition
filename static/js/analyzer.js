@@ -247,7 +247,7 @@ function pct(value) {
       const copy = {
         strong: ['\u2714', 'The model really used the highlighted area.', 'Covering it made the model much less sure.'],
         moderate: ['~', 'The highlighted area mattered, but so did the rest of the photo.', ''],
-        weak: ['!', 'The highlighted area does not explain this answer well.', 'The model also relied on other parts of the photo. Treat this result with extra caution.']
+        weak: ['!', 'The highlighted area does not explain this answer well.', 'The model also relied on other parts of the photo.']
       }[f.verdict];
       if (copy) {
         const mark = $('trustMark');
